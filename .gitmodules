@@ -4,3 +4,6 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/emocore"]
+	path = lib/emocore
+	url = https://github.com/emo-eth/emocore
