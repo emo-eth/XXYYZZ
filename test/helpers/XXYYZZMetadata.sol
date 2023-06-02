@@ -29,4 +29,12 @@ contract XXYYZZMetadata is XXYYZZ {
     function kRawV(string memory key, string memory value) external pure returns (string memory) {
         return _kRawV(key, value);
     }
+
+    function stringURI(uint256 id) external view returns (string memory) {
+        return _stringURI(id);
+    }
+
+    function stringContractURI() external pure returns (string memory) {
+        return _stringContractURI();
+    }
 }

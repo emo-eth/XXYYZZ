@@ -180,14 +180,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
     function testReroll_InvalidPayment() public {
         vm.expectRevert(XXYYZZ.InvalidPayment.selector);
-        test.reroll{value: mintPrice - 1}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice - 1}(0, 0, bytes32(0));
         vm.expectRevert(XXYYZZ.InvalidPayment.selector);
-        test.reroll{value: mintPrice + 1}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice + 1}(0, 0, bytes32(0));
     }
 
     function testReroll_TokenDoesNotExist() public {
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
-        test.reroll{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
     }
 
     function testReroll_notOwner() public {
@@ -196,7 +196,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         startHoax(makeAddr("not owner"), 1 ether);
 
         vm.expectRevert(XXYYZZ.OnlyTokenOwner.selector);
-        test.reroll{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
     }
 
     function testReroll_AlreadyFinalized() public {
@@ -204,19 +204,19 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.finalize{value: finalizePrice}(0);
 
         vm.expectRevert(XXYYZZ.AlreadyFinalized.selector);
-        test.reroll{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
     }
 
     function testReroll_SameHex() public {
         _mintSpecific(0, bytes32(0));
 
         vm.expectRevert(XXYYZZ.SameHex.selector);
-        test.reroll{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
     }
 
     function testReroll() public {
         _mintSpecific(0, bytes32(0));
-        _reroll(0, 1, bytes32(0));
+        _rerollSpecific(0, 1, bytes32(0));
         assertEq(test.ownerOf(1), address(this));
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
@@ -318,13 +318,13 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.bulkBurn(ids);
     }
 
-    function _reroll(uint256 oldId, uint256 newId, bytes32 salt) internal {
+    function _rerollSpecific(uint256 oldId, uint256 newId, bytes32 salt) internal {
         bytes32 commitmentHash = test.computeCommitment(address(this), newId, salt);
         test.commit(commitmentHash);
 
         vm.warp(block.timestamp + 2 minutes);
 
-        test.reroll{value: mintPrice}(oldId, newId, salt);
+        test.rerollSpecific{value: mintPrice}(oldId, newId, salt);
     }
 
     receive() external payable {
