@@ -11,16 +11,17 @@ abstract contract XXYYZZMint is XXYYZZCore {
         _initializeOwner(initialOwner);
         MAX_MINTS_PER_WALLET = maxMintsPerWallet;
         MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 10 days;
+        mintCloseTimestamp = uint64(MAX_MINT_CLOSE_TIMESTAMP);
     }
 
     /**
      * @notice Set the mint close timestamp. onlyOwner.
      */
-    function setMintCloseTimestamp(uint64 timestamp) external onlyOwner {
+    function setMintCloseTimestamp(uint256 timestamp) external onlyOwner {
         if (timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
             revert InvalidTimestamp();
         }
-        mintCloseTimestamp = timestamp;
+        mintCloseTimestamp = uint64(timestamp);
     }
 
     //////////
@@ -31,10 +32,10 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @notice Mint a token with a pseudorandom hex value.
      */
     function mint() public payable {
-        _checkRandomMintAndIncrementNumMinted(1);
+        uint256 newAmount = _checkMintAndIncrementNumMinted(1);
 
-        // get pseudorandom hex id
-        uint256 tokenId = _findAvailableHex();
+        // get pseudorandom hex id – doesn't need to be derived from caller
+        uint256 tokenId = _findAvailableHex(newAmount);
         _mint(msg.sender, tokenId);
     }
 
@@ -44,23 +45,14 @@ abstract contract XXYYZZMint is XXYYZZCore {
      */
     function mint(uint256 quantity) public payable {
         // check payment and quantity once
-        _checkRandomMintAndIncrementNumMinted(quantity);
+        uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
         for (uint256 i; i < quantity;) {
             // get pseudorandom hex id
-            uint256 tokenId = _findAvailableHex();
+            uint256 tokenId = _findAvailableHex(newAmount);
             _mint(msg.sender, tokenId);
             unchecked {
                 ++i;
             }
-        }
-    }
-
-    ///@dev Perform price and quantity validation as well as random mint cutoff validation
-    function _checkRandomMintAndIncrementNumMinted(uint256 quantity) internal {
-        uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
-        // ensure a certain number are reserved for mints of specific IDs
-        if (newAmount > RANDOM_MINT_CUTOFF) {
-            revert RandomMintingEnded();
         }
     }
 
@@ -130,18 +122,22 @@ abstract contract XXYYZZMint is XXYYZZCore {
             _validatePayment(MINT_PRICE, quantity);
             newUserNumMinted = _getAux(msg.sender) + quantity;
         }
-        if (newAmount > MAX_SUPPLY) {
-            revert MaximumSupplyExceeded();
-        }
+        _validateTimestamp();
         if (newUserNumMinted > MAX_MINTS_PER_WALLET) {
             revert MaximumMintsPerWalletExceeded();
         }
 
         // increment supply before minting
         unchecked {
-            _numMinted = uint128(newAmount);
+            _numMinted = uint64(newAmount);
             _setAux(msg.sender, uint224(newUserNumMinted));
         }
         return newAmount;
+    }
+
+    function _validateTimestamp() internal view {
+        if (block.timestamp > mintCloseTimestamp) {
+            revert MintClosed();
+        }
     }
 }

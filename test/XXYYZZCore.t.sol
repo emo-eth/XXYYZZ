@@ -21,12 +21,13 @@ contract XXYYZZCoreTest is Test, TestPlus {
     bool allowEther;
 
     function setUp() public {
+        vm.warp(10_000 days);
+
         test = new XXYYZZ(address(this),10_000,false);
         mintPrice = test.MINT_PRICE();
         rerollPrice = test.REROLL_PRICE();
         rerollSpecificPrice = test.REROLL_SPECIFIC_PRICE();
         finalizePrice = test.FINALIZE_PRICE();
-        vm.warp(10_000 days);
         allowEther = true;
     }
 
@@ -79,12 +80,12 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.balanceOf(address(this)), 3);
     }
 
-    function testMintMany_MaxSupply() public {
-        test.mint{value: mintPrice * 3}(3);
-        uint256 max = test.MAX_SUPPLY();
-        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
-        test.mint{value: mintPrice * max}(max);
-    }
+    // function testMintMany_MaxSupply() public {
+    //     test.mint{value: mintPrice * 3}(3);
+    //     uint256 max = test.MAX_SUPPLY();
+    //     vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
+    //     test.mint{value: mintPrice * max}(max);
+    // }
 
     function testMint() public {
         test.mint{value: mintPrice}();
@@ -188,27 +189,27 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
 
-    function testMint_RandomCutoff() public {
-        uint256 max = test.RANDOM_MINT_CUTOFF();
-        for (uint256 i = 0; i < max; i++) {
-            test.mint{value: mintPrice}();
-        }
-        assertEq(test.balanceOf(address(this)), max);
+    // function testMint_RandomCutoff() public {
+    //     uint256 max = test.RANDOM_MINT_CUTOFF();
+    //     for (uint256 i = 0; i < max; i++) {
+    //         test.mint{value: mintPrice}();
+    //     }
+    //     assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZCore.RandomMintingEnded.selector);
-        test.mint{value: mintPrice}();
-    }
+    //     vm.expectRevert(XXYYZZCore.RandomMintingEnded.selector);
+    //     test.mint{value: mintPrice}();
+    // }
 
-    function testMint_MaxSupply() public {
-        uint256 max = test.MAX_SUPPLY();
-        for (uint256 i = 0; i < max; i++) {
-            _mintSpecific(i, bytes32(0));
-        }
-        assertEq(test.balanceOf(address(this)), max);
+    // function testMint_MaxSupply() public {
+    //     uint256 max = test.MAX_SUPPLY();
+    //     for (uint256 i = 0; i < max; i++) {
+    //         _mintSpecific(i, bytes32(0));
+    //     }
+    //     assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
-        test.mint{value: mintPrice}();
-    }
+    //     vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
+    //     test.mint{value: mintPrice}();
+    // }
 
     function testMint_InvalidPayment() public {
         vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
@@ -225,11 +226,11 @@ contract XXYYZZCoreTest is Test, TestPlus {
     }
 
     function testMint_RoundRobinFinalized() public {
-        _mintSpecific(7250769, bytes32(0));
-        test.finalize{value: finalizePrice}(7250769);
-        test.burn(7250769);
+        _mintSpecific(3188073, bytes32(0));
+        test.finalize{value: finalizePrice}(3188073);
+        test.burn(3188073);
         test.mint{value: mintPrice}();
-        assertEq(test.ownerOf(7250770), address(this));
+        assertEq(test.ownerOf(3188074), address(this));
     }
 
     function testMintSpecific(uint24 xxyyzz, bytes32 salt) public {
@@ -269,15 +270,21 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
 
-    function testMintSpecific_MaxSupply() public {
-        uint256 max = test.MAX_SUPPLY();
-        for (uint256 i = 0; i < max; i++) {
-            _mintSpecific(i, bytes32(0));
-        }
-        assertEq(test.balanceOf(address(this)), max);
+    // function testMintSpecific_MaxSupply() public {
+    //     uint256 max = test.MAX_SUPPLY();
+    //     for (uint256 i = 0; i < max; i++) {
+    //         _mintSpecific(i, bytes32(0));
+    //     }
+    //     assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
-        test.mintSpecific{value: mintPrice}(0, bytes32(0));
+    //     vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
+    //     test.mintSpecific{value: mintPrice}(0, bytes32(0));
+    // }
+
+    function testMint_MintClosed() public {
+        vm.warp(block.timestamp + 365 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.mint{value: mintPrice}();
     }
 
     function testMintSpecific_InvalidPayment() public {
@@ -456,7 +463,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function testReroll() public {
         _mintSpecific(0, bytes32(0));
         test.reroll{value: rerollPrice}(0);
-        assertEq(test.ownerOf(10854013), address(this));
+        assertEq(test.ownerOf(3237828), address(this));
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
     }

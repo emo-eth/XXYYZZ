@@ -33,7 +33,7 @@ abstract contract XXYYZZBurn is XXYYZZCore {
         }
         // safe because there are at most 2^24 tokens, and ownerships are checked
         unchecked {
-            _numBurned += uint128(ids.length);
+            _numBurned += uint64(ids.length);
         }
         _burn(ids[0]);
         for (uint256 i = 1; i < ids.length;) {

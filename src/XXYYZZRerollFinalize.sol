@@ -13,7 +13,8 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      */
     function reroll(uint256 oldXXYYZZ) public payable {
         _validatePayment(REROLL_PRICE, 1);
-        _reroll(oldXXYYZZ);
+        // use the caller's seed to derive the new token ID
+        _reroll(oldXXYYZZ, _callerSeed(_numMinted));
     }
 
     /**
@@ -25,10 +26,13 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         unchecked {
             _validatePayment(REROLL_PRICE, ids.length);
         }
+        // use the caller's seed to derive the new token IDs
+        uint256 seed = _callerSeed(_numMinted);
         for (uint256 i; i < ids.length;) {
-            _reroll(ids[i]);
+            _reroll(ids[i], seed);
             unchecked {
                 ++i;
+                ++seed;
             }
         }
     }
@@ -151,11 +155,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     ///@dev Validate a reroll and then burn and re-mint a token with a new hex ID
-    function _reroll(uint256 oldXXYYZZ) internal {
+    function _reroll(uint256 oldXXYYZZ, uint256 seed) internal {
         _validateReroll(oldXXYYZZ);
         // burn old token
         _burn(oldXXYYZZ);
-        uint256 tokenId = _findAvailableHex();
+        uint256 tokenId = _findAvailableHex(seed);
         _mint(msg.sender, tokenId);
     }
 

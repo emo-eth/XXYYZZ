@@ -20,12 +20,10 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error MintClosed();
     error InvalidTimestamp();
 
-    uint256 public constant MINT_PRICE = 0.02 ether;
+    uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant REROLL_PRICE = 0.005 ether;
-    uint256 public constant REROLL_SPECIFIC_PRICE = 0.0075 ether;
+    uint256 public constant REROLL_SPECIFIC_PRICE = 0.005 ether;
     uint256 public constant FINALIZE_PRICE = 0.02 ether;
-    uint256 public constant MAX_SUPPLY = 10_000;
-    uint256 public constant RANDOM_MINT_CUTOFF = 8_000;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
@@ -33,8 +31,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint96 constant NOT_FINALIZED = 0;
 
     mapping(uint256 tokenId => address finalizer) public finalizers;
-    uint128 _numMinted;
-    uint128 _numBurned;
+    uint64 _numMinted;
+    uint64 _numBurned;
     uint64 public mintCloseTimestamp;
 
     constructor(address initialOwner) CommitReveal(1 days, 1 minutes, 5) {
@@ -95,8 +93,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // performs a low-level return
         assembly {
             mstore(0x20, 0x20)
-            mstore(0x46, 0x06585859595a5a)
-            // mstore(0x46, 0x06616263313233)
+            // mstore(0x46, 0x06585859595a5a)
+            mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -109,8 +107,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // performs a low-level return
         assembly {
             mstore(0x20, 0x20)
-            mstore(0x46, 0x06585859595a5a)
-            // mstore(0x46, 0x06616263313233)
+            // mstore(0x46, 0x06585859595a5a)
+            mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -237,12 +235,12 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     ///@dev Find the first unminted token ID based on the current number minted and PREVRANDAO
-    function _findAvailableHex() internal view returns (uint256) {
+    function _findAvailableHex(uint256 seed) internal view returns (uint256) {
         uint256 tokenId;
         assembly ("memory-safe") {
             // this is packed with _numBurned but that's fine for pseudorandom purposes, since it changes
             // with each new token minted
-            mstore(0, sload(_numMinted.slot))
+            mstore(0, seed)
             mstore(0x20, prevrandao())
             // mstore(0x20, blockhash(sub(number(), 1)))
             // hash the two values together and then mask to a uint24
@@ -276,14 +274,22 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
-    function _validateTimestamp() internal view {
-        if (block.timestamp < mintCloseTimestamp) {
-            revert MintClosed();
-        }
-    }
-
     ///@dev Check if a specific token has been finalized. Does not check if token exists.
     function _isFinalized(uint256 xxyyzz) internal view returns (bool) {
         return _getExtraData(xxyyzz) == FINALIZED;
+    }
+
+    /**
+     * @notice Generate a pseudorandom seed based on the caller and an initial seed, usually _numMinted
+     *         This ensures resulting seed is unique to the caller in the context of a block even if supply
+     *         is exhausted and _numMinted is no longer changing.
+     * @param initialSeed The initial seed to use for the hash to derive the caller's seed
+     */
+    function _callerSeed(uint256 initialSeed) internal view returns (uint256 seed) {
+        assembly ("memory-safe") {
+            mstore(0, caller())
+            mstore(0x20, initialSeed)
+            seed := keccak256(0x0c, 0x40)
+        }
     }
 }
