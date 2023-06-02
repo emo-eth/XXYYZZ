@@ -9,10 +9,13 @@ import {Ownable} from "solady/auth/Ownable.sol";
 contract XXYYZZ is ERC721, CommitReveal, Ownable {
     error InvalidPayment();
     error InvalidHex();
+    error SameHex();
     error MaximumSupplyExceeded();
     error AlreadyFinalized();
     error OnlyTokenOwner();
     error OnlyEOAs();
+    error NoIdsProvided();
+    error OwnerMismatch();
 
     uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant FINALIZATION_PRICE = 0.05 ether;
@@ -24,14 +27,28 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
     uint96 constant FINALIZED = 1;
     uint96 constant NOT_FINALIZED = 1;
 
-    // todo: numMinted, numBurned
-    uint256 public totalSupply;
-    mapping(uint256 => address) public finalizers;
+    mapping(uint256 tokenId => address finalizer) public finalizers;
+    uint128 _numMinted;
+    uint128 _numBurned;
 
-    constructor() CommitReveal(1 days, 1 minutes) {}
+    constructor(address initialOwner) CommitReveal(1 days, 1 minutes) {
+        _initializeOwner(initialOwner);
+    }
 
     receive() external payable {
         // send ether – see what happens! :)
+    }
+
+    function totalSupply() public view returns (uint256) {
+        return _numMinted - _numBurned;
+    }
+
+    function numMinted() external view returns (uint256) {
+        return _numMinted;
+    }
+
+    function numBurned() external view returns (uint256) {
+        return _numBurned;
     }
 
     function name() public pure override returns (string memory) {
@@ -56,7 +73,7 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
 
     function computeCommitment(address sender, uint256 xxyyzz, bytes32 salt)
         public
-        view
+        pure
         returns (bytes32 committmentHash)
     {
         assembly {
@@ -71,7 +88,7 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
         //     revert OnlyEOAs();
         // }
         // check max supply
-        if (totalSupply >= MAX_SUPPLY) {
+        if (_numMinted >= MAX_SUPPLY) {
             revert MaximumSupplyExceeded();
         }
         // validate mint price
@@ -80,7 +97,7 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
         }
         // increment supply before minting
         unchecked {
-            totalSupply += 1;
+            _numMinted += 1;
         }
         uint256 tokenId = _findAvailableHex();
         _mint(msg.sender, tokenId);
@@ -89,7 +106,8 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
     function _findAvailableHex() internal view returns (uint256) {
         uint256 tokenId;
         assembly ("memory-safe") {
-            mstore(0, sload(totalSupply.slot))
+            // this is packed with _numBurned but that's fine for pseudorandom purposes
+            mstore(0, sload(_numMinted.slot))
             mstore(0x20, prevrandao())
             tokenId := and(keccak256(0, 0x40), MAX_UINT24)
         }
@@ -106,7 +124,8 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
         //     revert OnlyEOAs();
         // }
         // check max supply
-        if (totalSupply >= MAX_SUPPLY) {
+        uint256 numberMinted = _numMinted;
+        if (numberMinted >= MAX_SUPPLY) {
             revert MaximumSupplyExceeded();
         }
         // validate mint price
@@ -115,7 +134,7 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
         }
         // increment supply before minting
         unchecked {
-            totalSupply += 1;
+            _numMinted = uint128(numberMinted + 1);
         }
 
         _mintSpecific(xxyyzz, salt);
@@ -133,6 +152,10 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
         // once finalized, cannot reroll
         if (_isFinalized(oldXXYYZZ)) {
             revert AlreadyFinalized();
+        }
+        // disallow burning to same token
+        if (oldXXYYZZ == newXXYYZZ) {
+            revert SameHex();
         }
         // burn old token
         _burn(oldXXYYZZ);
@@ -156,8 +179,36 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
             revert AlreadyFinalized();
         }
 
+        finalizers[xxyyzz] = msg.sender;
         // set finalized flag
         _finalize(xxyyzz);
+    }
+
+    function burn(uint256 xxyyzz) public {
+        _numBurned += 1;
+        _burn(msg.sender, xxyyzz);
+    }
+
+    function bulkBurn(uint256[] calldata ids) public {
+        if (ids.length == 0) {
+            revert NoIdsProvided();
+        }
+        address initialTokenOwner = _ownerOf(ids[0]);
+        unchecked {
+            _numBurned += uint128(ids.length);
+        }
+        _burn(msg.sender, ids[0]);
+        for (uint256 i = 1; i < ids.length;) {
+            uint256 id = ids[i];
+            if (_ownerOf(id) != initialTokenOwner) {
+                revert OwnerMismatch();
+            }
+            // still specify msg.sender since they may be not be approved for *all* tokens
+            _burn(msg.sender, id);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function _mintSpecific(uint256 xxyyzz, bytes32 salt) internal {
