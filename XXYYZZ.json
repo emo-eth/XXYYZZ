@@ -22,7 +22,17 @@
   },
   {
     "inputs": [],
+    "name": "ArrayLengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "BalanceQueryForZeroAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "BulkBurnerNotApprovedForAll",
     "type": "error"
   },
   {
@@ -44,6 +54,16 @@
   {
     "inputs": [],
     "name": "InvalidPayment",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaxBatchSizeExceeded",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MaximumMintsPerWalletExceeded",
     "type": "error"
   },
   {
@@ -73,11 +93,6 @@
   },
   {
     "inputs": [],
-    "name": "OnlyEOAs",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "OnlyTokenOwner",
     "type": "error"
   },
@@ -89,11 +104,6 @@
   {
     "inputs": [],
     "name": "RandomMintingEnded",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "SameHex",
     "type": "error"
   },
   {
@@ -287,6 +297,32 @@
   },
   {
     "inputs": [],
+    "name": "MAX_BATCH_SIZE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MAX_MINTS_PER_WALLET",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "MAX_SUPPLY",
     "outputs": [
       {
@@ -390,6 +426,91 @@
   {
     "inputs": [
       {
+        "internalType": "bytes32[]",
+        "name": "_commitments",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "batchCommit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "batchFinalize",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "batchReroll",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "oldIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "newIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "salts",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "batchRerollSpecific",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "oldIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "newIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "salts",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "batchRerollSpecificAndFinalize",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256[]",
         "name": "ids",
         "type": "uint256[]"
@@ -478,9 +599,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint24",
+        "internalType": "uint256",
         "name": "xxyyzz",
-        "type": "uint24"
+        "type": "uint256"
       },
       {
         "internalType": "bytes32",
@@ -494,6 +615,35 @@
         "internalType": "bytes32",
         "name": "committmentHash",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "salts",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "computeCommitments",
+    "outputs": [
+      {
+        "internalType": "bytes32[]",
+        "name": "commitmentHashes",
+        "type": "bytes32[]"
       }
     ],
     "stateMutability": "pure",
@@ -609,6 +759,37 @@
   {
     "inputs": [],
     "name": "mint",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "quantity",
+        "type": "uint256"
+      }
+    ],
+    "name": "mint",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bytes32[]",
+        "name": "salts",
+        "type": "bytes32[]"
+      }
+    ],
+    "name": "mintSpecific",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"

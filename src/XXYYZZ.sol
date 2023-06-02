@@ -10,7 +10,7 @@ contract XXYYZZ is XXYYZZCore {
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner) XXYYZZCore(initialOwner) {
+    constructor(address initialOwner) XXYYZZCore(initialOwner, 10_000) {
         _mint(initialOwner, 0x000000);
         _mint(initialOwner, 0x00DEAD);
         _mint(initialOwner, 0xFF6000);
