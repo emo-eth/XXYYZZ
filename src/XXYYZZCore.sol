@@ -93,8 +93,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // performs a low-level return
         assembly {
             mstore(0x20, 0x20)
-            // mstore(0x46, 0x06585859595a5a)
-            mstore(0x46, 0x06616263313233)
+            mstore(0x46, 0x06585859595a5a)
+            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -107,8 +107,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // performs a low-level return
         assembly {
             mstore(0x20, 0x20)
-            // mstore(0x46, 0x06585859595a5a)
-            mstore(0x46, 0x06616263313233)
+            mstore(0x46, 0x06585859595a5a)
+            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
