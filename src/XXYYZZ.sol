@@ -33,6 +33,10 @@ contract XXYYZZ is XXYYZZCore {
     }
 
     function contractURI() public pure returns (string memory) {
+        return string.concat("data:application/json;base64,", bytes(stringContractURI()).encode());
+    }
+
+    function stringContractURI() public pure returns (string memory) {
         return '{"name":"abc123","description":"my cool description","external_link":"https://mycoolsite.com"}';
     }
 

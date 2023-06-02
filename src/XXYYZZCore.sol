@@ -54,7 +54,7 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         assembly {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
-            // mstore(0x26, 0x06616263313233)
+            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -63,7 +63,7 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         assembly {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
-            // mstore(0x26, 0x06616263313233)
+            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -111,6 +111,7 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
             // this is packed with _numBurned but that's fine for pseudorandom purposes
             mstore(0, sload(_numMinted.slot))
             mstore(0x20, prevrandao())
+            // mstore(0x20, blockhash(sub(number(), 1)))
             tokenId := and(keccak256(0, 0x40), MAX_UINT24)
         }
         while (_exists(tokenId)) {

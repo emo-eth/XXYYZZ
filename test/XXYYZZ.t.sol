@@ -42,9 +42,9 @@ contract XXYYZZTest is Test, TestPlus {
         );
     }
 
-    function testContractURI() public {
+    function testStringContractURI() public {
         assertEq(
-            test.contractURI(),
+            test.stringContractURI(),
             '{"name":"abc123","description":"my cool description","external_link":"https://mycoolsite.com"}'
         );
     }
