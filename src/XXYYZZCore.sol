@@ -24,11 +24,12 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint256 public constant FINALIZE_PRICE = 0.02 ether;
     uint256 public constant MAX_SUPPLY = 10_000;
     uint256 public constant RANDOM_MINT_CUTOFF = 8_000;
+    uint256 public immutable MAX_MINTS_PER_WALLET;
+
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
     uint96 constant FINALIZED = 1;
-    uint96 constant NOT_FINALIZED = 1;
-    uint256 public immutable MAX_MINTS_PER_WALLET;
+    uint96 constant NOT_FINALIZED = 0;
 
     mapping(uint256 tokenId => address finalizer) public finalizers;
     uint128 _numMinted;
@@ -169,6 +170,47 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
+    /**
+     * @notice Get a commitment hash for a given sender, array of tokenIds, and salt. This allows for a single
+     *         commitment for a batch of IDs, but note that order and length of IDs matters.
+     *         If 5 IDs are passed, all 5 must be passed to either batchMintSpecific or batchRerollSpecific, in the
+     *         same order. Note that this could expose your desired IDs to the RPC provider.
+     *         Won't revert if any IDs are invalid or duplicated.
+     * @param sender The address of the account that will mint or reroll the token IDs
+     * @param ids The 6-hex-digit token IDs to mint or reroll
+     * @param salt The salt to use for the batch commitment
+     */
+    function computeBatchCommitment(address sender, uint256[] memory ids, bytes32 salt)
+        public
+        pure
+        returns (bytes32 commitmentHash)
+    {
+        assembly ("memory-safe") {
+            // hash contents of array minus length
+            let arrayHash :=
+                keccak256(
+                    // add 0x20 to get start of array contents
+                    add(0x20, ids),
+                    // multiply length of elements by 32 bytes for each element
+                    // shl by 5 is equivalent to multiplying by 0x20
+                    shl(5, mload(ids))
+                )
+
+            // cache free mem pointer
+            let freeMemPtr := mload(0x40)
+            // store sender in first memory slot
+            mstore(0, sender)
+            // store array hash in second memory slot
+            mstore(0x20, arrayHash)
+            // clobber free memory pointer with salt
+            mstore(0x40, salt)
+            // compute commitment hash
+            commitmentHash := keccak256(0, 0x60)
+            // restore free memory pointer
+            mstore(0x40, freeMemPtr)
+        }
+    }
+
     //////////
     // MINT //
     //////////
@@ -236,7 +278,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     /**
      * @notice Mint a token with a specific hex value.
      *         A user must first call commit(bytes32) or batchCommit(bytes32[]) with the result(s) of
-     *         computeCommittment(address,uint24,bytes32), and wait at least one minute.
+     *         computeCommittment(address,uint256,bytes32), and wait at least one minute.
      *         When calling mintSpecific, the "salt" should be the bytes32 salt provided to `computeCommitment` when
      *         creating the commitment hash.
      *
@@ -255,12 +297,11 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
 
     /**
      * @notice Mint a number of tokens with specific hex values.
-     *         A user must first call commit(bytes32) with the result of computeCommittment(address,uint24,bytes32), and wait at least one minute.
-     *
+     *         A user must first call commit(bytes32) with the result of computeCommittment(address,uint256,bytes32), and wait at least one minute.
      * @param ids The 6-hex-digit token IDs to mint
      * @param salts The salts used in the commitments for the tokens
      */
-    function mintSpecific(uint256[] calldata ids, bytes32[] calldata salts) public payable {
+    function batchMintSpecific(uint256[] calldata ids, bytes32[] calldata salts) public payable {
         if (ids.length != salts.length) {
             revert ArrayLengthMismatch();
         }
@@ -274,17 +315,32 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
+    /**
+     * @notice Mint a number of tokens with specific hex values.
+     *         A user must first call commit(bytes32) with the result of computeBatchCommitment(address,uint256[],bytes32), and wait at least one minute.
+     * @param ids The 6-hex-digit token IDs to mint
+     * @param salt The salt used in the batch commitment
+     */
+    function batchMintSpecific(uint256[] calldata ids, bytes32 salt) public payable {
+        _checkMintAndIncrementNumMinted(ids.length);
+        bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
+        for (uint256 i; i < ids.length;) {
+            _mintSpecificWithCommitment(ids[i], computedCommitment);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     ///@dev Check payment and quantity validation
     function _checkMintAndIncrementNumMinted(uint256 quantity) internal returns (uint256) {
         uint256 newAmount = _numMinted + quantity;
-        uint256 totalPrice;
         uint256 newUserNumMinted;
 
         unchecked {
-            totalPrice = quantity * MINT_PRICE;
+            _validatePayment(MINT_PRICE, quantity);
             newUserNumMinted = _getAux(msg.sender) + quantity;
         }
-        _validatePayment(totalPrice);
         if (newAmount > MAX_SUPPLY) {
             revert MaximumSupplyExceeded();
         }
@@ -328,7 +384,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @param oldXXYYZZ The 6-hex-digit token ID to burn
      */
     function reroll(uint256 oldXXYYZZ) public payable {
-        _validatePayment(REROLL_PRICE);
+        _validatePayment(REROLL_PRICE, 1);
         _reroll(oldXXYYZZ);
     }
 
@@ -339,7 +395,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     function batchReroll(uint256[] calldata ids) public payable {
         // unchecked block is safe because there are at most 2^24 tokens
         unchecked {
-            _validatePayment(ids.length * REROLL_PRICE);
+            _validatePayment(REROLL_PRICE, ids.length);
         }
         for (uint256 i; i < ids.length;) {
             _reroll(ids[i]);
@@ -356,7 +412,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @param salt The salt used in the commitment for the new ID commitment
      */
     function rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        _validatePayment(REROLL_SPECIFIC_PRICE);
+        _validatePayment(REROLL_SPECIFIC_PRICE, 1);
         _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
     }
 
@@ -373,13 +429,27 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         if (oldIds.length != newIds.length || oldIds.length != salts.length) {
             revert ArrayLengthMismatch();
         }
-        uint256 totalPrice;
         unchecked {
-            totalPrice = oldIds.length * REROLL_SPECIFIC_PRICE;
+            _validatePayment(REROLL_SPECIFIC_PRICE, oldIds.length);
         }
-        _validatePayment(totalPrice);
         for (uint256 i; i < oldIds.length;) {
             _rerollSpecific(oldIds[i], newIds[i], salts[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function batchRerollSpecific(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt) public payable {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        unchecked {
+            _validatePayment(REROLL_SPECIFIC_PRICE, oldIds.length);
+        }
+        bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
+        for (uint256 i; i < oldIds.length;) {
+            _rerollSpecificWithCommitment(oldIds[i], newIds[i], computedCommitment);
             unchecked {
                 ++i;
             }
@@ -390,11 +460,9 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
      */
     function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        uint256 totalPrice;
         unchecked {
-            totalPrice = REROLL_SPECIFIC_PRICE + FINALIZE_PRICE;
+            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, 1);
         }
-        _validatePayment(totalPrice);
         _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
         // won't re-validate price, but above function already did
         _finalize(newXXYYZZ);
@@ -412,14 +480,41 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         if (oldIds.length != newIds.length || oldIds.length != salts.length) {
             revert ArrayLengthMismatch();
         }
-        uint256 totalPrice;
         unchecked {
-            totalPrice = (oldIds.length * REROLL_SPECIFIC_PRICE) + (oldIds.length * FINALIZE_PRICE);
+            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, oldIds.length);
         }
-        _validatePayment(totalPrice);
         for (uint256 i; i < oldIds.length;) {
             uint256 newId = newIds[i];
             _rerollSpecific(oldIds[i], newId, salts[i]);
+            _finalize(newId);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    /**
+     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @param salt The salt used in the batch commitment for the new ID commitment
+     */
+    function batchRerollSpecificAndFinalize(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
+        public
+        payable
+    {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+
+        unchecked {
+            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, oldIds.length);
+        }
+
+        bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
+        for (uint256 i; i < oldIds.length;) {
+            uint256 newId = newIds[i];
+            _rerollSpecificWithCommitment(oldIds[i], newId, computedCommitment);
             _finalize(newId);
             unchecked {
                 ++i;
@@ -456,6 +551,14 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         _mintSpecific(newXXYYZZ, salt);
     }
 
+    ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID
+    function _rerollSpecificWithCommitment(uint256 oldId, uint256 newId, bytes32 computedCommitment) internal {
+        _validateReroll(oldId);
+        // burn old token
+        _burn(oldId);
+        _mintSpecificWithCommitment(newId, computedCommitment);
+    }
+
     //////////////
     // FINALIZE //
     //////////////
@@ -466,7 +569,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @param xxyyzz The 6-hex-digit token ID to finalize. Must be owned by the caller.
      */
     function finalize(uint256 xxyyzz) public payable {
-        _validatePayment(FINALIZE_PRICE);
+        _validatePayment(FINALIZE_PRICE, 1);
         _finalize(xxyyzz);
     }
 
@@ -477,12 +580,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @param ids The 6-hex-digit token IDs to finalize
      */
     function batchFinalize(uint256[] calldata ids) public payable {
-        uint256 totalPrice;
-        // can't overflow because there are at most uint24 tokens, and _finalize checks for existence
-        unchecked {
-            totalPrice = ids.length * FINALIZE_PRICE;
-        }
-        _validatePayment(totalPrice);
+        _validatePayment(FINALIZE_PRICE, ids.length);
         for (uint256 i; i < ids.length;) {
             _finalize(ids[i]);
             unchecked {
@@ -576,9 +674,12 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     ///@dev Validate msg value is equal to price
-    function _validatePayment(uint256 price) internal view {
-        if (msg.value != price) {
-            revert InvalidPayment();
+    function _validatePayment(uint256 unitPrice, uint256 quantity) internal view {
+        // can't overflow because there are at most uint24 tokens, and existence is checked for each token down the line
+        unchecked {
+            if (msg.value != (unitPrice * quantity)) {
+                revert InvalidPayment();
+            }
         }
     }
 }

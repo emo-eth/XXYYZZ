@@ -89,7 +89,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.balanceOf(address(this)), 1);
     }
 
-    function testMintSpecificMany() public {
+    function testBatchMintSpecific() public {
         bytes32[] memory hashes = new bytes32[](3);
         hashes[0] = test.computeCommitment(address(this), 0x123456, bytes32("1234"));
         hashes[1] = test.computeCommitment(address(this), 0x123457, bytes32("1234"));
@@ -104,12 +104,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
         ids[0] = 0x123456;
         ids[1] = 0x123457;
         ids[2] = 0x123458;
-        test.mintSpecific{value: mintPrice * 3}(ids, salts);
+        test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
 
         salts = new bytes32[](0);
         vm.expectRevert(XXYYZZ.ArrayLengthMismatch.selector);
-        test.mintSpecific{value: mintPrice * 3}(ids, salts);
+        test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
     }
+
+    function testBatchMintSpecific2() public {}
 
     function testMint_MaxPerWallet() public {
         test = new XXYYZZCoreImpl(address(this),5);
@@ -299,9 +301,13 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.finalize{value: finalizePrice}(0);
     }
 
-    function testIsFinalized_tokenDoesNotExist() public view {
+    function testIsFinalized_tokenDoesNotExist() public {
         // vm.expectRevert(ERC721.TokenDoesNotExist.selector);
-        test.isFinalized(0);
+        assertFalse(test.isFinalized(0));
+        _mintSpecific(0, bytes32(0));
+        assertFalse(test.isFinalized(0));
+        test.finalize{value: finalizePrice}(0);
+        assertTrue(test.isFinalized(0));
     }
 
     function testRerollSpecific_InvalidPayment() public {

@@ -10,5 +10,6 @@ optimizer_runs = 1_000_000
 
 [rpc_endpoints]
 polygon_mumbai = "${MUMBAI_RPC_URL}"
+goerli = "${GOERLI_RPC_URL}"
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

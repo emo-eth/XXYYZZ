@@ -15,12 +15,12 @@ contract XXYYZZ is XXYYZZCore {
         _mint(initialOwner, 0x00DEAD);
         _mint(initialOwner, 0xFF6000);
         _mint(initialOwner, 0x000069);
-        _mint(initialOwner, 0x6AFF34);
+        _mint(initialOwner, 0x00FF00);
         _finalizeToken(0x000000, initialOwner);
         _finalizeToken(0x00DEAD, initialOwner);
         _finalizeToken(0xFF6000, initialOwner);
         _finalizeToken(0x000069, initialOwner);
-        _finalizeToken(0x6AFF34, initialOwner);
+        _finalizeToken(0x00FF00, initialOwner);
         _numMinted = 5;
     }
 

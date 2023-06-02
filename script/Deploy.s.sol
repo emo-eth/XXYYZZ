@@ -9,7 +9,7 @@ contract Deploy is Script {
         uint256 pkey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.rememberKey(pkey);
 
-        vm.createSelectFork(getChain("polygon_mumbai").rpcUrl);
+        vm.createSelectFork(getChain("goerli").rpcUrl);
 
         vm.broadcast(deployer);
         XXYYZZ test = new XXYYZZ(deployer);
