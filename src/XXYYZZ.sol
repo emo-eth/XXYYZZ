@@ -10,7 +10,19 @@ contract XXYYZZ is XXYYZZCore {
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner) XXYYZZCore(initialOwner) {}
+    constructor(address initialOwner) XXYYZZCore(initialOwner) {
+        _mint(initialOwner, 0x000000);
+        _mint(initialOwner, 0x00DEAD);
+        _mint(initialOwner, 0xFF6000);
+        _mint(initialOwner, 0x000069);
+        _mint(initialOwner, 0x6AFF34);
+        _finalizeToken(0x000000, initialOwner);
+        _finalizeToken(0x00DEAD, initialOwner);
+        _finalizeToken(0xFF6000, initialOwner);
+        _finalizeToken(0x000069, initialOwner);
+        _finalizeToken(0x6AFF34, initialOwner);
+        _numMinted = 5;
+    }
 
     ///@notice Return the base64-encoded token metadata
     function tokenURI(uint256 id) public view virtual override returns (string memory) {

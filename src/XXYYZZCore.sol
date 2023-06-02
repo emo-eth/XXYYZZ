@@ -167,9 +167,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // if (msg.sender != tx.origin) {
         //     revert OnlyEOAs();
         // }
-
         _checkMintAndIncrementNumMinted(_numMinted);
-
         _mintSpecific(xxyyzz, salt);
     }
 
@@ -263,7 +261,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
 
         // set finalized flag
-        _finalizeToken(xxyyzz);
+        _finalizeToken(xxyyzz, msg.sender);
     }
 
     /**
@@ -320,8 +318,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     ///@dev Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
-    function _finalizeToken(uint256 xxyyzz) internal {
-        finalizers[xxyyzz] = msg.sender;
+    function _finalizeToken(uint256 xxyyzz, address finalizer) internal {
+        finalizers[xxyyzz] = finalizer;
         _setExtraData(xxyyzz, 1);
     }
 

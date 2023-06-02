@@ -33,12 +33,13 @@ contract XXYYZZTest is Test, TestPlus {
     }
 
     function testTraits() public {
-        _mintSpecific(0, bytes32(0));
-        assertEq(test.traits(0), '[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"No"}]');
-        test.finalize{value: test.FINALIZE_PRICE()}(0);
+        uint256 id = 1;
+        _mintSpecific(id, bytes32(0));
+        assertEq(test.traits(id), '[{"trait_type":"Color","value":"#000001"},{"trait_type":"Finalized","value":"No"}]');
+        test.finalize{value: test.FINALIZE_PRICE()}(id);
         assertEq(
-            test.traits(0),
-            '[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]'
+            test.traits(id),
+            '[{"trait_type":"Color","value":"#000001"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]'
         );
     }
 
@@ -50,16 +51,17 @@ contract XXYYZZTest is Test, TestPlus {
     }
 
     function testStringURI() public {
-        _mintSpecific(0, bytes32(0));
+        uint256 id = 1;
+        _mintSpecific(id, bytes32(0));
         assertEq(
-            test.stringURI(0),
-            '{"name":"#000000","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"No"}]}'
+            test.stringURI(id),
+            '{"name":"#000001","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMSIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000001"},{"trait_type":"Finalized","value":"No"}]}'
         );
 
-        test.finalize{value: test.FINALIZE_PRICE()}(0);
+        test.finalize{value: test.FINALIZE_PRICE()}(id);
         assertEq(
-            test.stringURI(0),
-            '{"name":"#000000","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]}'
+            test.stringURI(id),
+            '{"name":"#000001","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMSIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000001"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]}'
         );
     }
 
