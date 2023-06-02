@@ -6,6 +6,7 @@ libs = ["lib"]
 remappings = ['solady/=lib/solady/src/', 'solady-test/=lib/solady/test/']
 bytecode_hash = 'none'
 cbor_metadata = false
+optimizer_runs = 1_000_000
 
 [rpc_endpoints]
 polygon_mumbai = "${MUMBAI_RPC_URL}"
