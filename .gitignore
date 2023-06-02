@@ -16,3 +16,4 @@ docs/
 html
 lcov.info
 *.svg
+broadcast/

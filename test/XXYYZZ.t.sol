@@ -7,9 +7,12 @@ import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {XXYYZZMetadata as XXYYZZ} from "./helpers/XXYYZZMetadata.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 contract XXYYZZTest is Test, TestPlus {
     XXYYZZ test;
+
+    using LibString for string;
 
     function setUp() public {
         test = new XXYYZZ(address(this));
@@ -42,21 +45,21 @@ contract XXYYZZTest is Test, TestPlus {
     function testContractURI() public {
         assertEq(
             test.contractURI(),
-            '{"name":"abc123","description": "my cool description", "external_link": "https://mycoolsite.com"}'
+            '{"name":"abc123","description":"my cool description","external_link":"https://mycoolsite.com"}'
         );
     }
 
-    function testTokenURI() public {
+    function testStringURI() public {
         _mintSpecific(0, bytes32(0));
         assertEq(
-            test.tokenURI(0),
-            '{"description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"No"}]}'
+            test.stringURI(0),
+            '{"name":"#000000","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"No"}]}'
         );
 
         test.finalize{value: test.FINALIZATION_PRICE()}(0);
         assertEq(
-            test.tokenURI(0),
-            '{"description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]}'
+            test.stringURI(0),
+            '{"name":"#000000","external_link":"https://mycoolsite.com","description":"Proof of stuff.","image":"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2OTAiIGhlaWdodD0iNjkwIj48cmVjdCB3aWR0aD0iNjkwIiBoZWlnaHQ9IjY5MCIgZmlsbD0iIzAwMDAwMCIgLz48L3N2Zz4=","attributes":[{"trait_type":"Color","value":"#000000"},{"trait_type":"Finalized","value":"Yes"},{"trait_type":"Finalizer","value":"0x7fa9385be102ac3eac297483dd6233d62b3e1496"}]}'
         );
     }
 

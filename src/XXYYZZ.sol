@@ -13,8 +13,16 @@ contract XXYYZZ is XXYYZZCore {
     constructor(address initialOwner) XXYYZZCore(initialOwner) {}
 
     function tokenURI(uint256 id) public view virtual override returns (string memory) {
+        return string.concat("data:application/json;base64,", bytes(stringURI(id)).encode());
+    }
+
+    function stringURI(uint256 id) public view virtual returns (string memory) {
         return string.concat(
             "{",
+            _kv("name", _name(id)),
+            ",",
+            _kv("external_link", "https://mycoolsite.com"),
+            ",",
             _kv("description", "Proof of stuff."),
             ",",
             _kv("image", _imageURI(id)),
@@ -25,7 +33,11 @@ contract XXYYZZ is XXYYZZCore {
     }
 
     function contractURI() public pure returns (string memory) {
-        return '{"name":"abc123","description": "my cool description", "external_link": "https://mycoolsite.com"}';
+        return '{"name":"abc123","description":"my cool description","external_link":"https://mycoolsite.com"}';
+    }
+
+    function _name(uint256 id) internal pure returns (string memory) {
+        return string.concat("#", id.toHexStringNoPrefix({length: 3}));
     }
 
     function _imageURI(uint256 id) internal pure returns (string memory) {
@@ -41,7 +53,7 @@ contract XXYYZZ is XXYYZZCore {
     }
 
     function _traits(uint256 id) internal view returns (string memory) {
-        string memory color = _trait("Color", string.concat("#", id.toHexStringNoPrefix({length: 3})));
+        string memory color = _trait("Color", _name(id));
         if (isFinalized(id)) {
             string memory finalizedProp = _trait("Finalized", "Yes");
             return string.concat(

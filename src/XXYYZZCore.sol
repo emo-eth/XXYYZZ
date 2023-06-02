@@ -52,19 +52,19 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
 
     function name() public pure override returns (string memory) {
         assembly {
-            mstore(0, 0x20)
-            // mstore(0x26, 0x06585859595a5a)
-            mstore(0x26, 0x06616263313233)
-            return(0, 0x60)
+            mstore(0x20, 0x20)
+            mstore(0x46, 0x06585859595a5a)
+            // mstore(0x26, 0x06616263313233)
+            return(0x20, 0x80)
         }
     }
 
     function symbol() public pure override returns (string memory) {
         assembly {
-            mstore(0, 0x20)
-            // mstore(0x26, 0x06585859595a5a)
-            mstore(0x26, 0x06616263313233)
-            return(0, 0x60)
+            mstore(0x20, 0x20)
+            mstore(0x46, 0x06585859595a5a)
+            // mstore(0x26, 0x06616263313233)
+            return(0x20, 0x80)
         }
     }
 
