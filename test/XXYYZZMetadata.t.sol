@@ -4,12 +4,12 @@ pragma solidity ^0.8.17;
 import {TestPlus} from "solady-test/utils/TestPlus.sol";
 import {Test} from "forge-std/Test.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
-import {XXYYZZMetadata as XXYYZZ} from "./helpers/XXYYZZMetadata.sol";
+import {XXYYZZMetadataImpl as XXYYZZ} from "./helpers/XXYYZZMetadata.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-contract XXYYZZTest is Test, TestPlus {
+contract XXYYZZMetadataTest is Test, TestPlus {
     XXYYZZ test;
 
     using LibString for string;

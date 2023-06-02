@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import {XXYYZZ} from "../../src/XXYYZZ.sol";
 
-contract XXYYZZMetadata is XXYYZZ {
-    constructor(address initialOwner) XXYYZZ(initialOwner) {}
+contract XXYYZZMetadataImpl is XXYYZZ {
+    constructor(address initialOwner) XXYYZZ(initialOwner, 10_000, false) {}
 
     function imageURI(uint256 id) external pure returns (string memory) {
         return _imageURI(id);

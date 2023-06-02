@@ -3,10 +3,12 @@ pragma solidity ^0.8.17;
 
 import {TestPlus} from "solady-test/utils/TestPlus.sol";
 import {Test} from "forge-std/Test.sol";
-import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
-import {XXYYZZCoreImpl} from "./helpers/XXYYZZCoreImpl.sol";
+// import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
+import {XXYYZZ} from "../src/XXYYZZ.sol";
+import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
+import {Solarray} from "solarray/Solarray.sol";
 
 contract XXYYZZCoreTest is Test, TestPlus {
     error CannotReceiveEther();
@@ -19,7 +21,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     bool allowEther;
 
     function setUp() public {
-        test = new XXYYZZCoreImpl(address(this),10_000);
+        test = new XXYYZZ(address(this),10_000,false);
         mintPrice = test.MINT_PRICE();
         rerollPrice = test.REROLL_PRICE();
         rerollSpecificPrice = test.REROLL_SPECIFIC_PRICE();
@@ -68,7 +70,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function testComputeCommitments_ArrayLengthMismatch() public {
         uint256[] memory ids = new uint256[](3);
         bytes32[] memory salts = new bytes32[](2);
-        vm.expectRevert(XXYYZZ.ArrayLengthMismatch.selector);
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
         test.computeCommitments(address(this), ids, salts);
     }
 
@@ -80,7 +82,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function testMintMany_MaxSupply() public {
         test.mint{value: mintPrice * 3}(3);
         uint256 max = test.MAX_SUPPLY();
-        vm.expectRevert(XXYYZZ.MaximumSupplyExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
         test.mint{value: mintPrice * max}(max);
     }
 
@@ -107,28 +109,59 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
 
         salts = new bytes32[](0);
-        vm.expectRevert(XXYYZZ.ArrayLengthMismatch.selector);
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
         test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
     }
 
-    function testBatchMintSpecific2() public {}
+    function testBatchMintSpecific2() public {
+        bytes32 salt = bytes32("1234");
+        uint256[] memory ids = Solarray.uint256s(0, 1, 2);
+        bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
+        test.commit(commitmentHash);
+        vm.warp(block.timestamp + 2 minutes);
+        test.batchMintSpecific{value: mintPrice * 3}(ids, salt);
+        // assert ownerships
+        assertEq(test.ownerOf(0), address(this));
+        assertEq(test.ownerOf(1), address(this));
+        assertEq(test.ownerOf(2), address(this));
+    }
+
+    function testBatchMintSpecific2_InvalidId() public {
+        bytes32 salt = bytes32("1234");
+        uint256[] memory ids = Solarray.uint256s(0, 1, 200000000000);
+        bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
+        test.commit(commitmentHash);
+        vm.warp(block.timestamp + 2 minutes);
+        vm.expectRevert(XXYYZZCore.InvalidHex.selector);
+        test.batchMintSpecific{value: mintPrice * 3}(ids, salt);
+    }
+
+    function testBatchMintSpecific2_InvalidArray() public {
+        bytes32 salt = bytes32("1234");
+        uint256[] memory ids = Solarray.uint256s(0, 1, 2);
+        bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
+        test.commit(commitmentHash);
+        vm.warp(block.timestamp + 2 minutes);
+        vm.expectRevert(abi.encodeWithSelector(CommitReveal.InvalidCommitment.selector, 0));
+        test.batchMintSpecific{value: mintPrice * 3}(Solarray.uint256s(1, 0, 2), salt);
+    }
 
     function testMint_MaxPerWallet() public {
-        test = new XXYYZZCoreImpl(address(this),5);
+        test = new XXYYZZ(address(this),5,false);
         startHoax(makeAddr("wallet 1"), 1 ether);
-        vm.expectRevert(XXYYZZ.MaximumMintsPerWalletExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
         test.mint{value: mintPrice * 6}(6);
         vm.stopPrank();
 
         startHoax(makeAddr("wallet 2"), 1 ether);
         test.mint{value: mintPrice * 5}(5);
-        vm.expectRevert(XXYYZZ.MaximumMintsPerWalletExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
         test.mint{value: mintPrice}();
         vm.stopPrank();
 
         startHoax(makeAddr("wallet 3"), 1 ether);
         test.mint{value: mintPrice * 4}(4);
-        vm.expectRevert(XXYYZZ.MaximumMintsPerWalletExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
         test.mint{value: mintPrice * 2}(2);
         vm.stopPrank();
     }
@@ -151,7 +184,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
         test.burn(0);
-        vm.expectRevert(XXYYZZ.AlreadyFinalized.selector);
+        vm.expectRevert(XXYYZZCore.AlreadyFinalized.selector);
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
 
@@ -162,7 +195,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         }
         assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZ.RandomMintingEnded.selector);
+        vm.expectRevert(XXYYZZCore.RandomMintingEnded.selector);
         test.mint{value: mintPrice}();
     }
 
@@ -173,15 +206,15 @@ contract XXYYZZCoreTest is Test, TestPlus {
         }
         assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZ.MaximumSupplyExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
         test.mint{value: mintPrice}();
     }
 
     function testMint_InvalidPayment() public {
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.mint{value: mintPrice - 1}();
 
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.mint{value: mintPrice + 1}();
     }
 
@@ -210,13 +243,13 @@ contract XXYYZZCoreTest is Test, TestPlus {
     }
 
     function testMintSpecific_InvalidHex() public {
-        vm.expectRevert(XXYYZZ.InvalidHex.selector);
+        vm.expectRevert(XXYYZZCore.InvalidHex.selector);
         test.mintSpecific{value: mintPrice}(0x1000000000000000, bytes32(0));
     }
 
     function testMintSpecific_Invalidhex(uint256 id) public {
         id = bound(id, uint256(type(uint24).max) + 1, type(uint256).max);
-        vm.expectRevert(XXYYZZ.InvalidHex.selector);
+        vm.expectRevert(XXYYZZCore.InvalidHex.selector);
         test.mintSpecific{value: mintPrice}(id, bytes32(0));
     }
 
@@ -243,7 +276,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         }
         assertEq(test.balanceOf(address(this)), max);
 
-        vm.expectRevert(XXYYZZ.MaximumSupplyExceeded.selector);
+        vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
 
@@ -253,19 +286,19 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
         vm.warp(block.timestamp + 2 minutes);
 
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.mintSpecific{value: mintPrice - 1}(0, bytes32(0));
 
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.mintSpecific{value: mintPrice + 1}(0, bytes32(0));
     }
 
     function testFinalize_InvalidPayment() public {
         _mintSpecific(0, bytes32(0));
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.finalize{value: finalizePrice - 1}(0);
 
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.finalize{value: finalizePrice + 1}(0);
     }
 
@@ -274,7 +307,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.setApprovalForAll(makeAddr("not owner"), true);
         startHoax(makeAddr("not owner"), 1 ether);
 
-        vm.expectRevert(XXYYZZ.OnlyTokenOwner.selector);
+        vm.expectRevert(XXYYZZCore.OnlyTokenOwner.selector);
         test.finalize{value: finalizePrice}(0);
     }
 
@@ -297,7 +330,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
 
-        vm.expectRevert(XXYYZZ.AlreadyFinalized.selector);
+        vm.expectRevert(XXYYZZCore.AlreadyFinalized.selector);
         test.finalize{value: finalizePrice}(0);
     }
 
@@ -311,9 +344,9 @@ contract XXYYZZCoreTest is Test, TestPlus {
     }
 
     function testRerollSpecific_InvalidPayment() public {
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.rerollSpecific{value: rerollSpecificPrice - 1}(0, 0, bytes32(0));
-        vm.expectRevert(XXYYZZ.InvalidPayment.selector);
+        vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.rerollSpecific{value: rerollSpecificPrice + 1}(0, 0, bytes32(0));
     }
 
@@ -327,7 +360,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.setApprovalForAll(makeAddr("not owner"), true);
         startHoax(makeAddr("not owner"), 1 ether);
 
-        vm.expectRevert(XXYYZZ.OnlyTokenOwner.selector);
+        vm.expectRevert(XXYYZZCore.OnlyTokenOwner.selector);
         test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
     }
 
@@ -335,7 +368,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
 
-        vm.expectRevert(XXYYZZ.AlreadyFinalized.selector);
+        vm.expectRevert(XXYYZZCore.AlreadyFinalized.selector);
         test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
     }
 
@@ -355,6 +388,26 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.rerollSpecificAndFinalize{value: rerollSpecificPrice + finalizePrice}(0, 1, bytes32(0));
     }
 
+    function testBatchRerollSpecificBatch() public {
+        _mintSpecific(0, bytes32(0));
+        _mintSpecific(1, bytes32(0));
+
+        uint256[] memory oldIds = Solarray.uint256s(0, 1);
+        uint256[] memory newIds = Solarray.uint256s(2, 3);
+        bytes32 salt = bytes32("1234");
+        _batchCommitAndWarp(newIds, salt);
+        test.batchRerollSpecific{value: rerollSpecificPrice * 2}(oldIds, newIds, salt);
+
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
+        test.batchRerollSpecific{value: (rerollSpecificPrice) * 2}(oldIds, new uint256[](0), salt);
+    }
+
+    function _batchCommitAndWarp(uint256[] memory ids, bytes32 salt) internal {
+        bytes32 computedCommitment = test.computeBatchCommitment(address(this), ids, salt);
+        test.commit(computedCommitment);
+        vm.warp(block.timestamp + 2 minutes);
+    }
+
     function testBatchRerollSpecificAndFinalize() public {
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
@@ -368,7 +421,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         uint256[] memory newIds = new uint256[](2);
         newIds[0] = 2;
         newIds[1] = 3;
-        vm.expectRevert(XXYYZZ.ArrayLengthMismatch.selector);
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
         test.batchRerollSpecificAndFinalize{value: (rerollSpecificPrice + finalizePrice) * 2}(
             ids, ids, new bytes32[](0)
         );
@@ -380,6 +433,24 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.ownerOf(3), address(this));
         assertTrue(test.isFinalized(2));
         assertTrue(test.isFinalized(3));
+    }
+
+    function testBatchRerollSpecificAndFinalizeBatch() public {
+        _mintSpecific(0, bytes32(0));
+        _mintSpecific(1, bytes32(0));
+
+        uint256[] memory oldIds = Solarray.uint256s(0, 1);
+        uint256[] memory newIds = Solarray.uint256s(2, 3);
+        bytes32 salt = bytes32("1234");
+        _batchCommitAndWarp(newIds, salt);
+        test.batchRerollSpecificAndFinalize{value: (rerollSpecificPrice + finalizePrice) * 2}(oldIds, newIds, salt);
+        assertTrue(test.isFinalized(2));
+        assertTrue(test.isFinalized(3));
+
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
+        test.batchRerollSpecificAndFinalize{value: (rerollSpecificPrice + finalizePrice) * 2}(
+            oldIds, new uint256[](0), salt
+        );
     }
 
     function testReroll() public {
@@ -413,7 +484,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         newIds[1] = 3;
         bytes32[] memory salts = new bytes32[](2);
 
-        vm.expectRevert(XXYYZZ.ArrayLengthMismatch.selector);
+        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
         test.batchRerollSpecific(oldIds, newIds, new bytes32[](0));
 
         test.batchRerollSpecific{value: rerollSpecificPrice * 2}(oldIds, newIds, salts);
@@ -492,7 +563,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), false);
         vm.prank(makeAddr("not owner"));
-        vm.expectRevert(XXYYZZ.BulkBurnerNotApprovedForAll.selector);
+        vm.expectRevert(XXYYZZCore.BulkBurnerNotApprovedForAll.selector);
         test.bulkBurn(ids);
     }
 
@@ -511,7 +582,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     }
 
     function testBulkBurn_NoIds() public {
-        vm.expectRevert(XXYYZZ.NoIdsProvided.selector);
+        vm.expectRevert(XXYYZZCore.NoIdsProvided.selector);
         test.bulkBurn(new uint256[](0));
     }
 
@@ -526,7 +597,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         ids[1] = 1;
         startHoax(makeAddr("not owner"), 1 ether);
 
-        vm.expectRevert(XXYYZZ.OwnerMismatch.selector);
+        vm.expectRevert(XXYYZZCore.OwnerMismatch.selector);
         test.bulkBurn(ids);
     }
 
