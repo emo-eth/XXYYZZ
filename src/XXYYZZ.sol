@@ -2,7 +2,6 @@
 pragma solidity ^0.8.17;
 
 import {ERC721} from "solady/tokens/ERC721.sol";
-import {LibString} from "solady/utils/LibString.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
@@ -54,7 +53,8 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
     function name() public pure override returns (string memory) {
         assembly {
             mstore(0, 0x20)
-            mstore(0x26, 0x06585859595a5a)
+            // mstore(0x26, 0x06585859595a5a)
+            mstore(0x26, 0x06616263313233)
             return(0, 0x60)
         }
     }
@@ -62,13 +62,15 @@ contract XXYYZZ is ERC721, CommitReveal, Ownable {
     function symbol() public pure override returns (string memory) {
         assembly {
             mstore(0, 0x20)
-            mstore(0x26, 0x06585859595a5a)
+            // mstore(0x26, 0x06585859595a5a)
+            mstore(0x26, 0x06616263313233)
             return(0, 0x60)
         }
     }
 
-    function tokenURI(uint256 tokenId) public pure override returns (string memory) {
-        // return LibString.strConcat("https://example.com/token/", LibString.uint2str(tokenId));
+    function tokenURI(uint256) public view virtual override returns (string memory) {
+        // not implemented for separation of concerns
+        revert();
     }
 
     function computeCommitment(address sender, uint256 xxyyzz, bytes32 salt)
