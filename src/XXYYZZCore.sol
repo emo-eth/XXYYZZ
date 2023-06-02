@@ -5,7 +5,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
-contract XXYYZZCore is ERC721, CommitReveal, Ownable {
+abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error InvalidPayment();
     error InvalidHex();
     error SameHex();
@@ -17,11 +17,12 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error OwnerMismatch();
     error RandomMintingEnded();
 
-    uint256 public constant MINT_PRICE = 0.01 ether;
-    uint256 public constant REROLL_PRICE = 0.01 ether;
-    uint256 public constant FINALIZATION_PRICE = 0.05 ether;
+    uint256 public constant MINT_PRICE = 0.02 ether;
+    uint256 public constant REROLL_PRICE = 0.005 ether;
+    uint256 public constant REROLL_SPECIFIC_PRICE = 0.0075 ether;
+    uint256 public constant FINALIZE_PRICE = 0.02 ether;
     uint256 public constant MAX_SUPPLY = 10_000;
-    uint256 public immutable RANDOM_MINT_CUTOFF;
+    uint256 public constant RANDOM_MINT_CUTOFF = 8_000;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
@@ -34,8 +35,6 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
 
     constructor(address initialOwner) CommitReveal(1 days, 1 minutes) {
         _initializeOwner(initialOwner);
-        // TODO: rewrite tests to compensate
-        RANDOM_MINT_CUTOFF = 10_000;
     }
 
     receive() external payable {
@@ -105,20 +104,13 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     /**
-     * @notice Get the URI of the token
-     */
-    function tokenURI(uint256) public view virtual override returns (string memory) {
-        // not implemented for separation of concerns
-        revert();
-    }
-
-    /**
-     * @notice Get a commitment hash for a given sender, tokenId, and salt. Note that this could expose your ID to the RPC provider.
+     * @notice Get a commitment hash for a given sender, tokenId, and salt. Note that this could expose your desired
+     *         ID to the RPC provider.
      * @param sender The address of the account that will mint or reroll the token ID
      * @param xxyyzz The 6-hex-digit token ID to mint or reroll
      * @param salt The salt to use for the commitment
      */
-    function computeCommitment(address sender, uint256 xxyyzz, bytes32 salt)
+    function computeCommitment(address sender, uint24 xxyyzz, bytes32 salt)
         public
         pure
         returns (bytes32 committmentHash)
@@ -139,20 +131,11 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // }
         // check max supply
         uint256 numberMinted = _numMinted;
-        if (numberMinted >= MAX_SUPPLY) {
-            revert MaximumSupplyExceeded();
-        }
+        _checkMintAndIncrementNumMinted(numberMinted);
         if (numberMinted >= RANDOM_MINT_CUTOFF) {
             revert RandomMintingEnded();
         }
-        // validate mint price
-        if (msg.value != MINT_PRICE) {
-            revert InvalidPayment();
-        }
-        // increment supply before minting
-        unchecked {
-            _numMinted = uint128(numberMinted) + 1;
-        }
+
         uint256 tokenId = _findAvailableHex();
         _mint(msg.sender, tokenId);
     }
@@ -184,8 +167,13 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         // if (msg.sender != tx.origin) {
         //     revert OnlyEOAs();
         // }
-        // check max supply
-        uint256 numberMinted = _numMinted;
+
+        _checkMintAndIncrementNumMinted(_numMinted);
+
+        _mintSpecific(xxyyzz, salt);
+    }
+
+    function _checkMintAndIncrementNumMinted(uint256 numberMinted) internal {
         if (numberMinted >= MAX_SUPPLY) {
             revert MaximumSupplyExceeded();
         }
@@ -197,28 +185,30 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         unchecked {
             _numMinted = uint128(numberMinted + 1);
         }
-
-        _mintSpecific(xxyyzz, salt);
     }
 
     function reroll(uint256 oldXXYYZZ) public payable {
-        // check mint price
-        if (msg.value != REROLL_PRICE) {
-            revert InvalidPayment();
-        }
-        // only owner can reroll; also checks for existence
-        if (msg.sender != ownerOf(oldXXYYZZ)) {
-            revert OnlyTokenOwner();
-        }
-        // once finalized, cannot reroll
-        if (_isFinalized(oldXXYYZZ)) {
-            revert AlreadyFinalized();
-        }
+        _validateReroll(oldXXYYZZ, REROLL_PRICE);
         // burn old token
         _burn(oldXXYYZZ);
 
         uint256 tokenId = _findAvailableHex();
         _mint(msg.sender, tokenId);
+    }
+
+    function _validateReroll(uint256 id, uint256 price) internal view {
+        // check mint price
+        if (msg.value != price) {
+            revert InvalidPayment();
+        }
+        // only owner can reroll; also checks for existence
+        if (msg.sender != ownerOf(id)) {
+            revert OnlyTokenOwner();
+        }
+        // once finalized, cannot reroll
+        if (_isFinalized(id)) {
+            revert AlreadyFinalized();
+        }
     }
 
     /**
@@ -228,36 +218,38 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @param salt The salt used in the commitment for the new ID commitment
      */
     function rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        // check mint price
-        if (msg.value != REROLL_PRICE) {
-            revert InvalidPayment();
-        }
-        // only owner can reroll; also checks for existence
-        if (msg.sender != ownerOf(oldXXYYZZ)) {
-            revert OnlyTokenOwner();
-        }
-        // once finalized, cannot reroll
-        if (_isFinalized(oldXXYYZZ)) {
-            revert AlreadyFinalized();
-        }
-        // disallow burning to same token
-        if (oldXXYYZZ == newXXYYZZ) {
-            revert SameHex();
-        }
+        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt, REROLL_SPECIFIC_PRICE);
+    }
+
+    function _rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt, uint256 price) internal {
+        _validateReroll(oldXXYYZZ, price);
         // burn old token
         _burn(oldXXYYZZ);
 
-        // mint new token; do not update supply numbers
         _mintSpecific(newXXYYZZ, salt);
     }
 
+    function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
+        uint256 totalPrice;
+        unchecked {
+            totalPrice = REROLL_SPECIFIC_PRICE + FINALIZE_PRICE;
+        }
+        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt, totalPrice);
+        _finalize(newXXYYZZ, totalPrice);
+    }
+
     /**
-     * @notice Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
+     * @notice Finalize a token, which updates its metadata with a "Finalizer" trait and prevents it from being
+     *         rerolled in the future.
      * @param xxyyzz The 6-hex-digit token ID to finalize. Must be owned by the caller.
      */
     function finalize(uint256 xxyyzz) public payable {
+        _finalize(xxyyzz, FINALIZE_PRICE);
+    }
+
+    function _finalize(uint256 xxyyzz, uint256 price) internal {
         // validate finalization price
-        if (msg.value != FINALIZATION_PRICE) {
+        if (msg.value != price) {
             revert InvalidPayment();
         }
         // only owner can finalize; also checks for existence
@@ -271,7 +263,7 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
 
         // set finalized flag
-        _finalize(xxyyzz);
+        _finalizeToken(xxyyzz);
     }
 
     /**
@@ -321,14 +313,14 @@ contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     function _mintSpecific(uint256 xxyyzz, bytes32 salt) internal {
         _validateId(xxyyzz);
         // validate commitment to prevent front-running
-        bytes32 computedCommitment = computeCommitment(msg.sender, xxyyzz, salt);
+        bytes32 computedCommitment = computeCommitment(msg.sender, uint24(xxyyzz), salt);
         _assertCommittedReveal(computedCommitment);
 
         _mint(msg.sender, xxyyzz);
     }
 
     ///@dev Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
-    function _finalize(uint256 xxyyzz) internal {
+    function _finalizeToken(uint256 xxyyzz) internal {
         finalizers[xxyyzz] = msg.sender;
         _setExtraData(xxyyzz, 1);
     }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import {TestPlus} from "solady-test/utils/TestPlus.sol";
 import {Test} from "forge-std/Test.sol";
 import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
+import {XXYYZZCoreImpl} from "./helpers/XXYYZZCoreImpl.sol";
 import {CommitReveal} from "emocore/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 
@@ -12,13 +13,17 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
     XXYYZZ test;
     uint256 mintPrice;
+    uint256 rerollPrice;
+    uint256 rerollSpecificPrice;
     uint256 finalizePrice;
     bool allowEther;
 
     function setUp() public {
-        test = new XXYYZZ(address(this));
+        test = new XXYYZZCoreImpl(address(this));
         mintPrice = test.MINT_PRICE();
-        finalizePrice = test.FINALIZATION_PRICE();
+        rerollPrice = test.REROLL_PRICE();
+        rerollSpecificPrice = test.REROLL_SPECIFIC_PRICE();
+        finalizePrice = test.FINALIZE_PRICE();
         vm.warp(10_000 days);
         allowEther = true;
     }
@@ -31,12 +36,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.symbol(), "XXYYZZ");
     }
 
-    function testComputeCommitment(uint256 xxyyzz, bytes32 salt) public {
+    function testComputeCommitment(uint24 xxyyzz, bytes32 salt) public {
         uint256 concated;
         assembly {
             concated := or(shl(96, address()), xxyyzz)
         }
-        assertEq(test.computeCommitment(address(this), xxyyzz, salt), keccak256(abi.encodePacked(concated, salt)));
+        assertEq(
+            test.computeCommitment(address(this), uint24(xxyyzz), salt), keccak256(abi.encodePacked(concated, salt))
+        );
     }
 
     function testMint() public {
@@ -54,10 +61,21 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.balanceOf(address(this)), 1);
     }
 
+    function testMint_RandomCutoff() public {
+        uint256 max = test.RANDOM_MINT_CUTOFF();
+        for (uint256 i = 0; i < max; i++) {
+            test.mint{value: mintPrice}();
+        }
+        assertEq(test.balanceOf(address(this)), max);
+
+        vm.expectRevert(XXYYZZ.RandomMintingEnded.selector);
+        test.mint{value: mintPrice}();
+    }
+
     function testMint_MaxSupply() public {
         uint256 max = test.MAX_SUPPLY();
         for (uint256 i = 0; i < max; i++) {
-            test.mint{value: mintPrice}();
+            _mintSpecific(i, bytes32(0));
         }
         assertEq(test.balanceOf(address(this)), max);
 
@@ -178,43 +196,36 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.isFinalized(0);
     }
 
-    function testReroll_InvalidPayment() public {
+    function testRerollSpecific_InvalidPayment() public {
         vm.expectRevert(XXYYZZ.InvalidPayment.selector);
-        test.rerollSpecific{value: mintPrice - 1}(0, 0, bytes32(0));
+        test.rerollSpecific{value: rerollSpecificPrice - 1}(0, 0, bytes32(0));
         vm.expectRevert(XXYYZZ.InvalidPayment.selector);
-        test.rerollSpecific{value: mintPrice + 1}(0, 0, bytes32(0));
+        test.rerollSpecific{value: rerollSpecificPrice + 1}(0, 0, bytes32(0));
     }
 
-    function testReroll_TokenDoesNotExist() public {
+    function testRerollSpecific_TokenDoesNotExist() public {
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
-        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
     }
 
-    function testReroll_notOwner() public {
+    function testRerollSpecific_notOwner() public {
         _mintSpecific(0, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), true);
         startHoax(makeAddr("not owner"), 1 ether);
 
         vm.expectRevert(XXYYZZ.OnlyTokenOwner.selector);
-        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
     }
 
-    function testReroll_AlreadyFinalized() public {
+    function testRerollSpecific_AlreadyFinalized() public {
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
 
         vm.expectRevert(XXYYZZ.AlreadyFinalized.selector);
-        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
+        test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
     }
 
-    function testReroll_SameHex() public {
-        _mintSpecific(0, bytes32(0));
-
-        vm.expectRevert(XXYYZZ.SameHex.selector);
-        test.rerollSpecific{value: mintPrice}(0, 0, bytes32(0));
-    }
-
-    function testReroll() public {
+    function testRerollSpecific() public {
         _mintSpecific(0, bytes32(0));
         _rerollSpecific(0, 1, bytes32(0));
         assertEq(test.ownerOf(1), address(this));
@@ -222,8 +233,24 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.ownerOf(0);
     }
 
+    function testRerollSpecificAndFinalize() public {
+        _mintSpecific(0, bytes32(0));
+        bytes32 commitmentHash = test.computeCommitment(address(this), 1, bytes32(0));
+        test.commit(commitmentHash);
+        vm.warp(block.timestamp + 2 minutes);
+        test.rerollSpecificAndFinalize{value: rerollSpecificPrice + finalizePrice}(0, 1, bytes32(0));
+    }
+
+    function testReroll() public {
+        _mintSpecific(0, bytes32(0));
+        test.reroll{value: rerollPrice}(0);
+        assertEq(test.ownerOf(10854013), address(this));
+        vm.expectRevert(ERC721.TokenDoesNotExist.selector);
+        test.ownerOf(0);
+    }
+
     function _mintSpecific(uint256 id, bytes32 salt) internal {
-        bytes32 commitmentHash = test.computeCommitment(address(this), id, salt);
+        bytes32 commitmentHash = test.computeCommitment(address(this), uint24(id), salt);
         test.commit(commitmentHash);
 
         vm.warp(block.timestamp + 2 minutes);
@@ -319,12 +346,12 @@ contract XXYYZZCoreTest is Test, TestPlus {
     }
 
     function _rerollSpecific(uint256 oldId, uint256 newId, bytes32 salt) internal {
-        bytes32 commitmentHash = test.computeCommitment(address(this), newId, salt);
+        bytes32 commitmentHash = test.computeCommitment(address(this), uint24(newId), salt);
         test.commit(commitmentHash);
 
         vm.warp(block.timestamp + 2 minutes);
 
-        test.rerollSpecific{value: mintPrice}(oldId, newId, salt);
+        test.rerollSpecific{value: rerollSpecificPrice}(oldId, newId, salt);
     }
 
     receive() external payable {

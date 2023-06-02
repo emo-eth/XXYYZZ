@@ -274,7 +274,7 @@
   },
   {
     "inputs": [],
-    "name": "FINALIZATION_PRICE",
+    "name": "FINALIZE_PRICE",
     "outputs": [
       {
         "internalType": "uint256",
@@ -314,6 +314,32 @@
   {
     "inputs": [],
     "name": "RANDOM_MINT_CUTOFF",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "REROLL_PRICE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "REROLL_SPECIFIC_PRICE",
     "outputs": [
       {
         "internalType": "uint256",
@@ -452,9 +478,9 @@
         "type": "address"
       },
       {
-        "internalType": "uint256",
+        "internalType": "uint24",
         "name": "xxyyzz",
-        "type": "uint256"
+        "type": "uint24"
       },
       {
         "internalType": "bytes32",
@@ -754,6 +780,29 @@
       }
     ],
     "name": "rerollSpecific",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "oldXXYYZZ",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newXXYYZZ",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes32",
+        "name": "salt",
+        "type": "bytes32"
+      }
+    ],
+    "name": "rerollSpecificAndFinalize",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
