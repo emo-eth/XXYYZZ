@@ -65,9 +65,4 @@ contract XXYYZZMintTest is Test, TestPlus {
         vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
         test.batchRerollSpecificAndFinalize(ids, ids, bytes32(0));
     }
-
-    // function testMintMoreThanSupply() public {
-    //     // vm.expectRevert(XXYYZZCore.MintExceedsSupply.selector);
-    //     test.mint{value: mintPrice * 2 ** 24}(2 ** 24);
-    // }
 }
