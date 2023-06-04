@@ -26,26 +26,7 @@ contract CommitReveal {
      * @param commitment The hash to commit.
      */
     function commit(bytes32 commitment) public {
-        assembly {
-            // calculate location of the mapping(bytes32 commitment => uint256
-            // timestamp)
-            // store caller
-            mstore(0, caller())
-            // store slot of commitments mapping
-            mstore(0x20, commitments.slot)
-            // compute slot of mapping(bytes32 => uint256) for the caller
-            let commitmentMapSlot := keccak256(0, 0x40)
-            // calculate the slot for the timestamp associated with the
-            // commitment
-            // store the commitment hash
-            mstore(0, commitment)
-            // store the derived intermediate map slot
-            mstore(0x20, commitmentMapSlot)
-            // compute slot of the timestamp
-            let timestampSlot := keccak256(0, 0x40)
-            // store the timestamp
-            sstore(timestampSlot, timestamp())
-        }
+        commitments[msg.sender][commitment] = block.timestamp;
     }
 
     function batchCommit(bytes32[] calldata _commitments) public {
