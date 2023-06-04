@@ -156,28 +156,16 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
 
     ///@dev Validate a reroll and then burn and re-mint a token with a new hex ID
     function _reroll(uint256 oldXXYYZZ, uint256 seed) internal {
-        _validateReroll(oldXXYYZZ);
+        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
         // burn old token
         _burn(oldXXYYZZ);
         uint256 tokenId = _findAvailableHex(seed);
         _mint(msg.sender, tokenId);
     }
 
-    ///@dev Validate msg.value, msg.sender, and finalized status of an ID for rerolling
-    function _validateReroll(uint256 id) internal view {
-        // only owner can reroll; also checks for existence
-        if (msg.sender != ownerOf(id)) {
-            revert OnlyTokenOwner();
-        }
-        // once finalized, cannot reroll
-        if (_isFinalized(id)) {
-            revert AlreadyFinalized();
-        }
-    }
-
     ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID
     function _rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) internal {
-        _validateReroll(oldXXYYZZ);
+        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
         // burn old token
         _burn(oldXXYYZZ);
         _mintSpecific(newXXYYZZ, salt);
@@ -185,7 +173,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
 
     ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID
     function _rerollSpecificWithCommitment(uint256 oldId, uint256 newId, bytes32 computedCommitment) internal {
-        _validateReroll(oldId);
+        _checkCallerIsOwnerAndNotFinalized(oldId);
         // burn old token
         _burn(oldId);
         _mintSpecificWithCommitment(newId, computedCommitment);
@@ -222,16 +210,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     function _finalize(uint256 xxyyzz) internal {
-        // only owner can finalize; also checks for existence
-        if (msg.sender != ownerOf(xxyyzz)) {
-            revert OnlyTokenOwner();
-        }
-        // once finalized, cannot finalize again
-        // send ether directly to contract if you'd like to donate :)
-        if (_isFinalized(xxyyzz)) {
-            revert AlreadyFinalized();
-        }
-
+        _checkCallerIsOwnerAndNotFinalized(xxyyzz);
         // set finalized flag
         _finalizeToken(xxyyzz, msg.sender);
     }

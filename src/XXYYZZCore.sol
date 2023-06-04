@@ -29,6 +29,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint256 constant MAX_UINT24 = 0xFFFFFF;
     uint96 constant FINALIZED = 1;
     uint96 constant NOT_FINALIZED = 0;
+    // re-declared from solady ERC721 for custom gas optimizations
+    uint256 private constant _ERC721_MASTER_SLOT_SEED = 0x7d8825530a5a2e7a << 192;
 
     mapping(uint256 tokenId => address finalizer) public finalizers;
     uint64 _numMinted;
@@ -51,8 +53,9 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @notice Withdraws all funds from the contract to the current owner. onlyOwner.
      */
     function withdraw() public onlyOwner {
-        assembly ("memory-safe") {
+        assembly {
             let succ := call(gas(), caller(), selfbalance(), 0, 0, 0, 0)
+            // revert with returndata if call failed
             if iszero(succ) {
                 returndatacopy(0, 0, returndatasize())
                 revert(0, returndatasize())
@@ -185,7 +188,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         pure
         returns (bytes32 commitmentHash)
     {
-        assembly ("memory-safe") {
+        assembly {
             // hash contents of array minus length
             let arrayHash :=
                 keccak256(
@@ -246,9 +249,9 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
             // hash the two values together and then mask to a uint24
             tokenId := and(keccak256(0, 0x40), MAX_UINT24)
         }
-        // check for the small chance that the token ID is already minted – if so, increment until we find one that
-        // isn't
-        while (_exists(tokenId) || _isFinalized(tokenId)) {
+        // check for the small chance that the token ID is already minted or finalized – if so, increment until we
+        // find one that isn't
+        while (_loadRawOwnershipSlot(tokenId) != 0) {
             // safe to do unchecked math here as it is modulo 2^24
             unchecked {
                 tokenId = (tokenId + 1) & MAX_UINT24;
@@ -280,16 +283,46 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     /**
-     * @notice Generate a pseudorandom seed based on the caller and an initial seed, usually _numMinted
-     *         This ensures resulting seed is unique to the caller in the context of a block even if supply
-     *         is exhausted and _numMinted is no longer changing.
-     * @param initialSeed The initial seed to use for the hash to derive the caller's seed
+     * @dev Generate a pseudorandom seed based on the caller and an initial seed, usually _numMinted
+     *      This ensures resulting seed is unique to the caller in the context of a block even if supply
+     *      is exhausted and _numMinted is no longer changing.
      */
     function _callerSeed(uint256 initialSeed) internal view returns (uint256 seed) {
         assembly ("memory-safe") {
             mstore(0, caller())
             mstore(0x20, initialSeed)
             seed := keccak256(0x0c, 0x40)
+        }
+    }
+
+    /**
+     * @dev Load the raw ownership slot for a given token ID, which contains both the owner and the extra data
+     *      (finalization status). This allows for succint checking of whether or not a token is mintable,
+     *      i.e., whether it does not currently exist and has not been finalized. It also allows for avoiding
+     *      an extra SLOAD in cases when checking both owner/existence and finalization status.
+     */
+    function _loadRawOwnershipSlot(uint256 id) internal view returns (uint256 result) {
+        assembly ("memory-safe") {
+            mstore(0x00, id)
+            mstore(0x1c, _ERC721_MASTER_SLOT_SEED)
+            result := sload(add(id, add(id, keccak256(0x00, 0x20))))
+        }
+    }
+
+    function _checkCallerIsOwnerAndNotFinalized(uint256 id) internal view {
+        uint256 rawSlot = _loadRawOwnershipSlot(id);
+        // clean and cast to address
+        address owner = address(uint160(rawSlot));
+        if ((rawSlot) > type(uint160).max) {
+            revert AlreadyFinalized();
+        }
+        // if completely empty, token does not exist
+        if (rawSlot == 0) {
+            revert TokenDoesNotExist();
+        }
+        // check that caller is owner
+        if (owner != msg.sender) {
+            revert OnlyTokenOwner();
         }
     }
 }
