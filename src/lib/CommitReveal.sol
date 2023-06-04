@@ -21,14 +21,19 @@ contract CommitReveal {
     mapping(address user => mapping(bytes32 commitment => uint256 timestamp)) public commitments;
 
     /**
-     * @notice Commit a hash to the contract, to be retrieved and verified after
-     * a delay.
+     * @notice Commit a hash to the contract, to be retrieved and verified after a delay. A commitment is valid only
+     *         after COMMITMENT_DELAY seconds have passed, and is only valid for COMMITMENT_LIFESPAN seconds.
      * @param commitment The hash to commit.
      */
     function commit(bytes32 commitment) public {
         commitments[msg.sender][commitment] = block.timestamp;
     }
 
+    /**
+     * @notice Commit multiple hashes to the contract, to be retrieved and verified after a delay. A commitment is
+     *         valid only after COMMITMENT_DELAY seconds have passed, and is only valid for COMMITMENT_LIFESPAN
+     *         seconds.
+     */
     function batchCommit(bytes32[] calldata _commitments) public {
         if (_commitments.length > MAX_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
@@ -43,7 +48,7 @@ contract CommitReveal {
 
     /**
      * @dev Assert that a commitment has been made and is within a valid time
-     * window.
+     *      window.
      * @param computedCommitmentHash The derived commitment hash to verify.
      */
     function _assertCommittedReveal(bytes32 computedCommitmentHash) internal view {

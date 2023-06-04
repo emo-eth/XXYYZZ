@@ -9,9 +9,8 @@ import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {CommitReveal} from "../src/lib/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Solarray} from "solarray/Solarray.sol";
-import {Ownable} from "solady/auth/Ownable.sol";
 
-contract XXYYZZMintTest is Test, TestPlus {
+contract XXYYZZFinalizeRerollTest is Test, TestPlus {
     error CannotReceiveEther();
 
     XXYYZZ test;
@@ -32,37 +31,13 @@ contract XXYYZZMintTest is Test, TestPlus {
         allowEther = true;
     }
 
-    function testSetMintCloseTimestamp() public {
-        vm.warp(20_000 days);
-        test.setMintCloseTimestamp(1);
-        assertEq(test.mintCloseTimestamp(), 1);
-        vm.expectRevert(XXYYZZCore.InvalidTimestamp.selector);
-        test.setMintCloseTimestamp(block.timestamp);
-    }
-
-    function testSetMintCloseTimestamp_onlyOwner() public {
-        vm.prank(makeAddr("notOwner"));
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        test.setMintCloseTimestamp(1);
-    }
-
-    function testBatchRerollSpecific() public {
+    function testBatchMintSpecific() public {
         uint256[] memory ids = new uint256[](6);
         bytes32[] memory salts = new bytes32[](6);
         vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecific(ids, ids, salts);
+        test.batchMintSpecific(ids, salts);
 
         vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecific(ids, ids, bytes32(0));
-    }
-
-    function testBatchRerollSpecificAndFinalize() public {
-        uint256[] memory ids = new uint256[](6);
-        bytes32[] memory salts = new bytes32[](6);
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecificAndFinalize(ids, ids, salts);
-
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecificAndFinalize(ids, ids, bytes32(0));
+        test.batchMintSpecific(ids, bytes32(0));
     }
 }

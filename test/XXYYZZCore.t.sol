@@ -147,28 +147,6 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.batchMintSpecific{value: mintPrice * 3}(Solarray.uint256s(1, 0, 2), salt);
     }
 
-    function testMint_MaxPerWallet() public {
-        test = new XXYYZZ(address(this),5,false);
-        startHoax(makeAddr("wallet 1"), 1 ether);
-        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
-        test.mint{value: mintPrice * 6}(6);
-        vm.stopPrank();
-
-        startHoax(makeAddr("wallet 2"), 1 ether);
-        test.mint{value: mintPrice * 5}(5);
-        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
-        test.mint{value: mintPrice}();
-        vm.stopPrank();
-
-        startHoax(makeAddr("wallet 3"), 1 ether);
-        test.mint{value: mintPrice * 4}(4);
-        vm.expectRevert(XXYYZZCore.MaximumMintsPerWalletExceeded.selector);
-        test.mint{value: mintPrice * 2}(2);
-        vm.stopPrank();
-    }
-
-    function testMintSpecific_maxPerWallet() public {}
-
     function testMintSpecific() public {
         bytes32 commitmentHash = test.computeCommitment(address(this), 0x123456, bytes32("1234"));
         test.commit(commitmentHash);

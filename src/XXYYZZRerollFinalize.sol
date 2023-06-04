@@ -44,7 +44,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      * @param salt The salt used in the commitment for the new ID commitment
      */
     function rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        _validatePayment(REROLL_SPECIFIC_PRICE, 1);
+        _validatePayment(REROLL_PRICE, 1);
         _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
     }
 
@@ -61,8 +61,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         if (oldIds.length != newIds.length || oldIds.length != salts.length) {
             revert ArrayLengthMismatch();
         }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         unchecked {
-            _validatePayment(REROLL_SPECIFIC_PRICE, oldIds.length);
+            _validatePayment(REROLL_PRICE, oldIds.length);
         }
         for (uint256 i; i < oldIds.length;) {
             _rerollSpecific(oldIds[i], newIds[i], salts[i]);
@@ -76,8 +79,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         if (oldIds.length != newIds.length) {
             revert ArrayLengthMismatch();
         }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         unchecked {
-            _validatePayment(REROLL_SPECIFIC_PRICE, oldIds.length);
+            _validatePayment(REROLL_PRICE, oldIds.length);
         }
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         for (uint256 i; i < oldIds.length;) {
@@ -93,7 +99,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      */
     function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
         unchecked {
-            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, 1);
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
         }
         _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
         // won't re-validate price, but above function already did
@@ -103,7 +109,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     /**
      * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them.
      */
-
     function batchRerollSpecificAndFinalize(
         uint256[] calldata oldIds,
         uint256[] calldata newIds,
@@ -112,8 +117,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         if (oldIds.length != newIds.length || oldIds.length != salts.length) {
             revert ArrayLengthMismatch();
         }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         unchecked {
-            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, oldIds.length);
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, oldIds.length);
         }
         for (uint256 i; i < oldIds.length;) {
             uint256 newId = newIds[i];
@@ -138,9 +146,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         if (oldIds.length != newIds.length) {
             revert ArrayLengthMismatch();
         }
-
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         unchecked {
-            _validatePayment(REROLL_SPECIFIC_PRICE + FINALIZE_PRICE, oldIds.length);
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, oldIds.length);
         }
 
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);

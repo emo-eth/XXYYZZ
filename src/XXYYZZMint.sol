@@ -15,7 +15,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
     }
 
     /**
-     * @notice Set the mint close timestamp. onlyOwner.
+     * @notice Set the mint close timestamp. Close can only set to be earlier than MAX_MINT_CLOSE_TIMESTAMP. onlyOwner.
      */
     function setMintCloseTimestamp(uint256 timestamp) external onlyOwner {
         if (timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
@@ -86,6 +86,9 @@ abstract contract XXYYZZMint is XXYYZZCore {
         if (ids.length != salts.length) {
             revert ArrayLengthMismatch();
         }
+        if (ids.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         _checkMintAndIncrementNumMinted(ids.length);
         bytes32[] memory computedCommitments = computeCommitments(msg.sender, ids, salts);
         for (uint256 i; i < ids.length;) {
@@ -103,6 +106,9 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @param salt The salt used in the batch commitment
      */
     function batchMintSpecific(uint256[] calldata ids, bytes32 salt) public payable {
+        if (ids.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
         _checkMintAndIncrementNumMinted(ids.length);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
         for (uint256 i; i < ids.length;) {
@@ -116,22 +122,14 @@ abstract contract XXYYZZMint is XXYYZZCore {
     ///@dev Check payment and quantity validation
     function _checkMintAndIncrementNumMinted(uint256 quantity) internal returns (uint256) {
         uint256 newAmount = _numMinted + quantity;
-        uint256 newUserNumMinted;
 
         unchecked {
             _validatePayment(MINT_PRICE, quantity);
-            newUserNumMinted = _getAux(msg.sender) + quantity;
         }
         _validateTimestamp();
-        if (newUserNumMinted > MAX_MINTS_PER_WALLET) {
-            revert MaximumMintsPerWalletExceeded();
-        }
 
         // increment supply before minting
-        unchecked {
-            _numMinted = uint64(newAmount);
-            _setAux(msg.sender, uint224(newUserNumMinted));
-        }
+        _numMinted = uint64(newAmount);
         return newAmount;
     }
 
