@@ -237,12 +237,16 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         _mint(msg.sender, xxyyzz);
     }
 
-    ///@dev Find the first unminted token ID based on the current number minted and PREVRANDAO
+    /**
+     * @dev Find the first unminted token ID based on the current number minted and PREVRANDAO
+     * @param seed The seed to use for the random number generation – when minting, should be _numMinted, when
+     *             re-rolling, should be caller. In the case of re-rolling, this means that if a single caller makes
+     *             multiple re-rolls in the same block, there will be collisions. This is fine, as the extra gas  cost
+     *             discourages batch re-rolling with bots or scripts (at least from the same address).
+     */
     function _findAvailableHex(uint256 seed) internal view returns (uint256) {
         uint256 tokenId;
         assembly ("memory-safe") {
-            // this is packed with _numBurned but that's fine for pseudorandom purposes, since it changes
-            // with each new token minted
             mstore(0, seed)
             mstore(0x20, prevrandao())
             // mstore(0x20, blockhash(sub(number(), 1)))
@@ -283,19 +287,6 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     /**
-     * @dev Generate a pseudorandom seed based on the caller and an initial seed, usually _numMinted
-     *      This ensures resulting seed is unique to the caller in the context of a block even if supply
-     *      is exhausted and _numMinted is no longer changing.
-     */
-    function _callerSeed(uint256 initialSeed) internal view returns (uint256 seed) {
-        assembly ("memory-safe") {
-            mstore(0, caller())
-            mstore(0x20, initialSeed)
-            seed := keccak256(0x0c, 0x40)
-        }
-    }
-
-    /**
      * @dev Load the raw ownership slot for a given token ID, which contains both the owner and the extra data
      *      (finalization status). This allows for succint checking of whether or not a token is mintable,
      *      i.e., whether it does not currently exist and has not been finalized. It also allows for avoiding
@@ -303,6 +294,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      */
     function _loadRawOwnershipSlot(uint256 id) internal view returns (uint256 result) {
         assembly ("memory-safe") {
+            // since all ids are < uint24, this basically just clears the 0-slot before writing 4 bytes of slot seed
             mstore(0x00, id)
             mstore(0x1c, _ERC721_MASTER_SLOT_SEED)
             result := sload(add(id, add(id, keccak256(0x00, 0x20))))

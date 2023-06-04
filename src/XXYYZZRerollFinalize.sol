@@ -14,7 +14,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     function reroll(uint256 oldXXYYZZ) public payable {
         _validatePayment(REROLL_PRICE, 1);
         // use the caller's seed to derive the new token ID
-        _reroll(oldXXYYZZ, _callerSeed(_numMinted));
+        _reroll(oldXXYYZZ, uint160(msg.sender));
     }
 
     /**
@@ -27,7 +27,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
             _validatePayment(REROLL_PRICE, ids.length);
         }
         // use the caller's seed to derive the new token IDs
-        uint256 seed = _callerSeed(_numMinted);
+        uint256 seed = uint256(uint160(msg.sender));
         for (uint256 i; i < ids.length;) {
             _reroll(ids[i], seed);
             unchecked {

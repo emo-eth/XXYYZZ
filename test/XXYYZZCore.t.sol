@@ -463,7 +463,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function testReroll() public {
         _mintSpecific(0, bytes32(0));
         test.reroll{value: rerollPrice}(0);
-        assertEq(test.ownerOf(3237828), address(this));
+        assertEq(test.ownerOf(10599171), address(this));
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
     }
