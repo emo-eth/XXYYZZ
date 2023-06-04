@@ -24,10 +24,10 @@ contract XXYYZZMintTest is Test, TestPlus {
     function setUp() public {
         vm.warp(10_000 days);
 
-        test = new XXYYZZ(address(this),10_000,false);
+        test = new XXYYZZ(address(this),5,false);
         mintPrice = test.MINT_PRICE();
         rerollPrice = test.REROLL_PRICE();
-        rerollSpecificPrice = test.REROLL_SPECIFIC_PRICE();
+        rerollSpecificPrice = test.REROLL_PRICE();
         finalizePrice = test.FINALIZE_PRICE();
         allowEther = true;
     }
@@ -65,4 +65,9 @@ contract XXYYZZMintTest is Test, TestPlus {
         vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
         test.batchRerollSpecificAndFinalize(ids, ids, bytes32(0));
     }
+
+    // function testMintMoreThanSupply() public {
+    //     // vm.expectRevert(XXYYZZCore.MintExceedsSupply.selector);
+    //     test.mint{value: mintPrice * 2 ** 24}(2 ** 24);
+    // }
 }

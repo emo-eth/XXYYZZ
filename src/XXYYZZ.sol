@@ -14,8 +14,8 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZMint, XXYYZZRerollFinalize 
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner, uint256 maxMintsPerWallet, bool constructorMint)
-        XXYYZZMint(initialOwner, maxMintsPerWallet)
+    constructor(address initialOwner, uint256 maxBatchSize, bool constructorMint)
+        XXYYZZMint(initialOwner, maxBatchSize)
     {
         if (constructorMint) {
             _mint(initialOwner, 0x000000);

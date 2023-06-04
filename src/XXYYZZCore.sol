@@ -14,15 +14,13 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error NoIdsProvided();
     error OwnerMismatch();
     error BulkBurnerNotApprovedForAll();
-    error RandomMintingEnded();
     error ArrayLengthMismatch();
-    error MaximumMintsPerWalletExceeded();
     error MintClosed();
     error InvalidTimestamp();
+    error OnlyFinalized();
 
     uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant REROLL_PRICE = 0.005 ether;
-    uint256 public constant REROLL_SPECIFIC_PRICE = 0.005 ether;
     uint256 public constant FINALIZE_PRICE = 0.02 ether;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
@@ -37,7 +35,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint64 _numBurned;
     uint64 public mintCloseTimestamp;
 
-    constructor(address initialOwner) CommitReveal(1 days, 1 minutes, 5) {
+    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 1 minutes, maxBatchSize) {
         _initializeOwner(initialOwner);
     }
 

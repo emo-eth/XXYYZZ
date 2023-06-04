@@ -23,10 +23,10 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function setUp() public {
         vm.warp(10_000 days);
 
-        test = new XXYYZZ(address(this),10_000,false);
+        test = new XXYYZZ(address(this),5,false);
         mintPrice = test.MINT_PRICE();
         rerollPrice = test.REROLL_PRICE();
-        rerollSpecificPrice = test.REROLL_SPECIFIC_PRICE();
+        rerollSpecificPrice = test.REROLL_PRICE();
         finalizePrice = test.FINALIZE_PRICE();
         allowEther = true;
     }
@@ -159,10 +159,10 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
     function testMintSpecific_PreviouslyFinalized() public {
         _mintSpecific(0, bytes32(0));
-        test.burn(0);
+        test.burn(0, false);
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
-        test.burn(0);
+        test.burn(0, false);
         vm.expectRevert(XXYYZZCore.AlreadyFinalized.selector);
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
@@ -206,7 +206,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
     function testMint_RoundRobinFinalized() public {
         _mintSpecific(3188073, bytes32(0));
         test.finalize{value: finalizePrice}(3188073);
-        test.burn(3188073);
+        test.burn(3188073, false);
         test.mint{value: mintPrice}();
         assertEq(test.ownerOf(3188074), address(this));
     }
@@ -398,8 +398,8 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         _mintSpecific(2, bytes32(0));
         _mintSpecific(3, bytes32(0));
-        test.burn(2);
-        test.burn(3);
+        test.burn(2, false);
+        test.burn(3, false);
 
         uint256[] memory ids = new uint256[](2);
         ids[1] = 1;
@@ -459,8 +459,8 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         _mintSpecific(2, bytes32(0));
         _mintSpecific(3, bytes32(0));
-        test.burn(2);
-        test.burn(3);
+        test.burn(2, false);
+        test.burn(3, false);
         uint256[] memory oldIds = new uint256[](2);
         oldIds[0] = 0;
         oldIds[1] = 1;
@@ -503,7 +503,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
     function testBurn() public {
         _mintSpecific(0, bytes32(0));
-        test.burn(0);
+        test.burn(0, false);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
     }
@@ -513,7 +513,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.setApprovalForAll(makeAddr("not owner"), true);
         startHoax(makeAddr("not owner"), 1 ether);
 
-        test.burn(0);
+        test.burn(0, false);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
     }
@@ -523,7 +523,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         startHoax(makeAddr("not owner"), 1 ether);
 
         vm.expectRevert(ERC721.NotOwnerNorApproved.selector);
-        test.burn(0);
+        test.burn(0, false);
     }
 
     function testBulkBurn() public {
@@ -532,7 +532,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         uint256[] memory ids = new uint256[](2);
         ids[0] = 0;
         ids[1] = 1;
-        test.bulkBurn(ids);
+        test.bulkBurn(ids, false);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
@@ -542,14 +542,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), true);
         vm.prank(makeAddr("not owner"));
-        test.bulkBurn(ids);
+        test.bulkBurn(ids, false);
 
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), false);
         vm.prank(makeAddr("not owner"));
         vm.expectRevert(XXYYZZCore.BulkBurnerNotApprovedForAll.selector);
-        test.bulkBurn(ids);
+        test.bulkBurn(ids, false);
     }
 
     function testTotalSupplyNumMintedNumBurned(uint256 numMint, uint256 numBurn) public {
@@ -559,7 +559,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
             _mintSpecific(i, bytes32(0));
         }
         for (uint256 i = 0; i < numBurn; i++) {
-            test.burn(i);
+            test.burn(i, false);
         }
         assertEq(test.totalSupply(), numMint - numBurn);
         assertEq(test.numMinted(), numMint);
@@ -568,7 +568,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
 
     function testBulkBurn_NoIds() public {
         vm.expectRevert(XXYYZZCore.NoIdsProvided.selector);
-        test.bulkBurn(new uint256[](0));
+        test.bulkBurn(new uint256[](0), false);
     }
 
     function testBulkBurn_OwnerMismatch() public {
@@ -583,7 +583,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         startHoax(makeAddr("not owner"), 1 ether);
 
         vm.expectRevert(XXYYZZCore.OwnerMismatch.selector);
-        test.bulkBurn(ids);
+        test.bulkBurn(ids, false);
     }
 
     function _rerollSpecific(uint256 oldId, uint256 newId, bytes32 salt) internal {

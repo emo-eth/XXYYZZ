@@ -4,12 +4,10 @@ pragma solidity ^0.8.17;
 import {XXYYZZCore} from "./XXYYZZCore.sol";
 
 abstract contract XXYYZZMint is XXYYZZCore {
-    uint256 public immutable MAX_MINTS_PER_WALLET;
     uint256 public immutable MAX_MINT_CLOSE_TIMESTAMP;
 
-    constructor(address initialOwner, uint256 maxMintsPerWallet) XXYYZZCore(initialOwner) {
+    constructor(address initialOwner, uint256 maxBatchSize) XXYYZZCore(initialOwner, maxBatchSize) {
         _initializeOwner(initialOwner);
-        MAX_MINTS_PER_WALLET = maxMintsPerWallet;
         MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 10 days;
         mintCloseTimestamp = uint64(MAX_MINT_CLOSE_TIMESTAMP);
     }

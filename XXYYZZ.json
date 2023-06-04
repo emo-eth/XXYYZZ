@@ -8,7 +8,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "maxMintsPerWallet",
+        "name": "maxBatchSize",
         "type": "uint256"
       },
       {
@@ -78,11 +78,6 @@
   },
   {
     "inputs": [],
-    "name": "MaximumMintsPerWalletExceeded",
-    "type": "error"
-  },
-  {
-    "inputs": [],
     "name": "MaximumSupplyExceeded",
     "type": "error"
   },
@@ -113,17 +108,17 @@
   },
   {
     "inputs": [],
+    "name": "OnlyFinalized",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "OnlyTokenOwner",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "OwnerMismatch",
-    "type": "error"
-  },
-  {
-    "inputs": [],
-    "name": "RandomMintingEnded",
     "type": "error"
   },
   {
@@ -330,19 +325,6 @@
   },
   {
     "inputs": [],
-    "name": "MAX_MINTS_PER_WALLET",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "MAX_MINT_CLOSE_TIMESTAMP",
     "outputs": [
       {
@@ -370,19 +352,6 @@
   {
     "inputs": [],
     "name": "REROLL_PRICE",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "REROLL_SPECIFIC_PRICE",
     "outputs": [
       {
         "internalType": "uint256",
@@ -603,6 +572,11 @@
         "internalType": "uint256[]",
         "name": "ids",
         "type": "uint256[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "onlyFinalized",
+        "type": "bool"
       }
     ],
     "name": "bulkBurn",
@@ -616,6 +590,11 @@
         "internalType": "uint256",
         "name": "xxyyzz",
         "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "onlyFinalized",
+        "type": "bool"
       }
     ],
     "name": "burn",

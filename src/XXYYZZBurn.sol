@@ -10,23 +10,40 @@ abstract contract XXYYZZBurn is XXYYZZCore {
 
     /**
      * @notice Permanently burn a token that the caller owns or is approved for.
+     * @param xxyyzz The token to burn.
+     * @param onlyFinalized If true, only tokens that have been finalized can be burned. Useful if an approved operator
+     *                      is burning tokens on behalf of a user.
      */
-    function burn(uint256 xxyyzz) public {
+    function burn(uint256 xxyyzz, bool onlyFinalized) public {
         // cannot overflow as there are at most 2^24 tokens, and _numBurned is a uint128
         unchecked {
             _numBurned += 1;
+        }
+        if (onlyFinalized) {
+            if (!_isFinalized(xxyyzz)) {
+                revert OnlyFinalized();
+            }
         }
         _burn(msg.sender, xxyyzz);
     }
 
     /**
      * @notice Permanently burn multiple tokens. All must be owned by the same address.
+     * @param ids The tokens to burn.
+     * @param onlyFinalized If true, only tokens that have been finalized can be burned. Useful if an approved operator
+     *                      is burning tokens on behalf of a user.
      */
-    function bulkBurn(uint256[] calldata ids) public {
+    function bulkBurn(uint256[] calldata ids, bool onlyFinalized) public {
         if (ids.length == 0) {
             revert NoIdsProvided();
         }
-        address initialTokenOwner = _ownerOf(ids[0]);
+        uint256 packedOwnerFinalizedSlot = _loadRawOwnershipSlot(ids[0]);
+        address initialTokenOwner = address(uint160(packedOwnerFinalizedSlot));
+        if (onlyFinalized) {
+            if (packedOwnerFinalizedSlot < type(uint160).max) {
+                revert OnlyFinalized();
+            }
+        }
         // validate that msg.sender has approval to burn all tokens
         if (!(initialTokenOwner == msg.sender || isApprovedForAll(initialTokenOwner, msg.sender))) {
             revert BulkBurnerNotApprovedForAll();
@@ -38,9 +55,16 @@ abstract contract XXYYZZBurn is XXYYZZCore {
         _burn(ids[0]);
         for (uint256 i = 1; i < ids.length;) {
             uint256 id = ids[i];
+            packedOwnerFinalizedSlot = _loadRawOwnershipSlot(id);
+            address owner = address(uint160(packedOwnerFinalizedSlot));
             // ensure that all tokens are owned by the same address
-            if (_ownerOf(id) != initialTokenOwner) {
+            if (owner != initialTokenOwner) {
                 revert OwnerMismatch();
+            }
+            if (onlyFinalized) {
+                if (packedOwnerFinalizedSlot < type(uint160).max) {
+                    revert OnlyFinalized();
+                }
             }
             // no need to specify msg.sender since they are approved for all tokens
             // this also checks token exists
