@@ -115,7 +115,9 @@ abstract contract XXYYZZMint is XXYYZZCore {
         for (uint256 i; i < ids.length;) {
             if (_mintSpecificUnprotected(ids[i])) {
                 minted[i] = true;
-                ++quantityAvailable;
+                unchecked {
+                    ++quantityAvailable;
+                }
             }
             unchecked {
                 ++i;
@@ -128,9 +130,8 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
         _checkMintAndIncrementNumMinted(ids.length, quantityAvailable);
         // refund for unavailable ids
-        unchecked {
-            _refundOverpayment(MINT_PRICE, ids.length - quantityAvailable);
-        }
+        _refundOverpayment(MINT_PRICE, quantityAvailable);
+
         return minted;
     }
 

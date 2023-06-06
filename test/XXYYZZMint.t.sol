@@ -86,6 +86,7 @@ contract XXYYZZMintTest is Test, TestPlus {
         assertEq(test.ownerOf(1), address(this));
         assertEq(test.ownerOf(2), address(this));
         assertEq(test.numMinted(), 2);
+        assertEq(address(test).balance, mintPrice * 2);
 
         ids = Solarray.uint256s(2, 3);
         uint256 beforeBalance = address(this).balance;

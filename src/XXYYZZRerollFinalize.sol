@@ -110,9 +110,8 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
             revert NoneAvailable();
         }
         // refund any overpayment
-        unchecked {
-            _refundOverpayment(REROLL_PRICE, oldIds.length - quantityRerolled);
-        }
+        _refundOverpayment(REROLL_PRICE, quantityRerolled);
+
         return rerolled;
     }
 
@@ -208,9 +207,8 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
             revert NoneAvailable();
         }
         // refund any overpayment
-        unchecked {
-            _refundOverpayment(cumulativePrice, oldIds.length - quantityRerolled);
-        }
+        _refundOverpayment(cumulativePrice, quantityRerolled);
+
         return rerolled;
     }
 

@@ -276,10 +276,10 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     ///@dev Refund any overpayment
-    function _refundOverpayment(uint256 unitPrice, uint256 quantity) internal {
+    function _refundOverpayment(uint256 unitPrice, uint256 availableQuantity) internal {
         unchecked {
             // can't underflow because payment was already validated; even if it did, it would just revert
-            uint256 overpayment = msg.value - (unitPrice * quantity);
+            uint256 overpayment = msg.value - (unitPrice * availableQuantity);
             if (overpayment != 0) {
                 SafeTransferLib.safeTransferETH(msg.sender, overpayment);
             }
