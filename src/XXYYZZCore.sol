@@ -21,6 +21,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error OnlyFinalized();
     error Unavailable();
     error NoneAvailable();
+    error MaxBatchSizeExceeded();
 
     uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant REROLL_PRICE = 0.005 ether;

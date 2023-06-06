@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 contract CommitReveal {
     error InvalidCommitment(uint256 committedTimestamp);
-    error MaxBatchSizeExceeded();
 
     uint256 private constant INVALID_COMMITMENT_SELECTOR = 0x31e63ea0;
 
