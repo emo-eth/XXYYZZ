@@ -33,11 +33,11 @@ abstract contract XXYYZZBurn is XXYYZZCore {
      * @param onlyFinalized If true, only tokens that have been finalized can be burned. Useful if an approved operator
      *                      is burning tokens on behalf of a user.
      */
-    function bulkBurn(uint256[] calldata ids, bool onlyFinalized) public {
+    function batchBurn(uint256[] calldata ids, bool onlyFinalized) public {
         if (ids.length == 0) {
             revert NoIdsProvided();
         }
-        uint256 packedOwnerFinalizedSlot = _loadRawOwnershipSlot(ids[0]);
+        uint256 packedOwnerFinalizedSlot = _packedOwnershipSlot(ids[0]);
         address initialTokenOwner = address(uint160(packedOwnerFinalizedSlot));
         if (onlyFinalized) {
             if (packedOwnerFinalizedSlot < type(uint160).max) {
@@ -46,7 +46,7 @@ abstract contract XXYYZZBurn is XXYYZZCore {
         }
         // validate that msg.sender has approval to burn all tokens
         if (!(initialTokenOwner == msg.sender || isApprovedForAll(initialTokenOwner, msg.sender))) {
-            revert BulkBurnerNotApprovedForAll();
+            revert BatchBurnerNotApprovedForAll();
         }
         // safe because there are at most 2^24 tokens, and ownerships are checked
         unchecked {
@@ -55,7 +55,7 @@ abstract contract XXYYZZBurn is XXYYZZCore {
         _burn(ids[0]);
         for (uint256 i = 1; i < ids.length;) {
             uint256 id = ids[i];
-            packedOwnerFinalizedSlot = _loadRawOwnershipSlot(id);
+            packedOwnerFinalizedSlot = _packedOwnershipSlot(id);
             address owner = address(uint160(packedOwnerFinalizedSlot));
             // ensure that all tokens are owned by the same address
             if (owner != initialTokenOwner) {

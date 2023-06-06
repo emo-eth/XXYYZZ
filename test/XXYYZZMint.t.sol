@@ -45,24 +45,4 @@ contract XXYYZZMintTest is Test, TestPlus {
         vm.expectRevert(Ownable.Unauthorized.selector);
         test.setMintCloseTimestamp(1);
     }
-
-    function testBatchRerollSpecific() public {
-        uint256[] memory ids = new uint256[](6);
-        bytes32[] memory salts = new bytes32[](6);
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecific(ids, ids, salts);
-
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecific(ids, ids, bytes32(0));
-    }
-
-    function testBatchRerollSpecificAndFinalize() public {
-        uint256[] memory ids = new uint256[](6);
-        bytes32[] memory salts = new bytes32[](6);
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecificAndFinalize(ids, ids, salts);
-
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchRerollSpecificAndFinalize(ids, ids, bytes32(0));
-    }
 }

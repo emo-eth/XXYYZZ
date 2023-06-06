@@ -48,13 +48,13 @@ contract XXYYZZBurnTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         uint256[] memory ids = Solarray.uint256s(0, 1);
         vm.expectRevert(XXYYZZCore.OnlyFinalized.selector);
-        test.bulkBurn(ids, true);
+        test.batchBurn(ids, true);
         test.finalize{value: finalizePrice}(0);
         vm.expectRevert(XXYYZZCore.OnlyFinalized.selector);
-        test.bulkBurn(ids, true);
+        test.batchBurn(ids, true);
 
         test.finalize{value: finalizePrice}(1);
-        test.bulkBurn(ids, true);
+        test.batchBurn(ids, true);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
@@ -67,7 +67,7 @@ contract XXYYZZBurnTest is Test, TestPlus {
         ids = Solarray.uint256s(2, 3);
         test.finalize{value: finalizePrice}(3);
         vm.expectRevert(XXYYZZCore.OnlyFinalized.selector);
-        test.bulkBurn(ids, true);
+        test.batchBurn(ids, true);
     }
 
     function _mintSpecific(uint256 id, bytes32 salt) internal {

@@ -4,6 +4,7 @@ pragma solidity ^0.8.17;
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {CommitReveal} from "./lib/CommitReveal.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error InvalidPayment();
@@ -13,15 +14,18 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     error OnlyTokenOwner();
     error NoIdsProvided();
     error OwnerMismatch();
-    error BulkBurnerNotApprovedForAll();
+    error BatchBurnerNotApprovedForAll();
     error ArrayLengthMismatch();
     error MintClosed();
     error InvalidTimestamp();
     error OnlyFinalized();
+    error Unavailable();
+    error NoneAvailable();
 
     uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant REROLL_PRICE = 0.005 ether;
     uint256 public constant FINALIZE_PRICE = 0.02 ether;
+    uint256 public immutable MAX_BATCH_SIZE;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
@@ -35,8 +39,9 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint64 _numBurned;
     uint64 public mintCloseTimestamp;
 
-    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 1 minutes, maxBatchSize) {
+    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 1 minutes) {
         _initializeOwner(initialOwner);
+        MAX_BATCH_SIZE = maxBatchSize;
     }
 
     receive() external payable {
@@ -148,30 +153,6 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     /**
-     * @notice Get a commitment hash for a given sender, tokenIds, and salts. Note that this could expose your desired
-     *         IDs to the RPC provider. Won't revert if the IDs are invalid, but will return invalid hashes.
-     * @param sender The address of the account that will mint or reroll the token IDs
-     * @param ids The 6-hex-digit token IDs to mint or reroll
-     * @param salts The salts to use for the commitments
-     */
-    function computeCommitments(address sender, uint256[] calldata ids, bytes32[] calldata salts)
-        public
-        pure
-        returns (bytes32[] memory commitmentHashes)
-    {
-        if (ids.length != salts.length) {
-            revert ArrayLengthMismatch();
-        }
-        commitmentHashes = new bytes32[](ids.length);
-        for (uint256 i; i < ids.length;) {
-            commitmentHashes[i] = computeCommitment(sender, ids[i], salts[i]);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /**
      * @notice Get a commitment hash for a given sender, array of tokenIds, and salt. This allows for a single
      *         commitment for a batch of IDs, but note that order and length of IDs matters.
      *         If 5 IDs are passed, all 5 must be passed to either batchMintSpecific or batchRerollSpecific, in the
@@ -235,6 +216,20 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         _mint(msg.sender, xxyyzz);
     }
 
+    ///@dev Mint a token with a specific hex value without validating it was committed to and is not not finalized
+    function _mintSpecificUnprotected(uint256 xxyyzz) internal returns (bool) {
+        // validate ID is valid 6-hex-digit number
+        _validateId(xxyyzz);
+        // don't allow minting of tokens that exist or were finalized and then burned
+        if (_packedOwnershipSlot(xxyyzz) != 0) {
+            // return false indicating a no-op
+            return false;
+        }
+        // otherwise mint the token
+        _mint(msg.sender, xxyyzz);
+        return true;
+    }
+
     /**
      * @dev Find the first unminted token ID based on the current number minted and PREVRANDAO
      * @param seed The seed to use for the random number generation – when minting, should be _numMinted, when
@@ -253,7 +248,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
         // check for the small chance that the token ID is already minted or finalized – if so, increment until we
         // find one that isn't
-        while (_loadRawOwnershipSlot(tokenId) != 0) {
+        while (_packedOwnershipSlot(tokenId) != 0) {
             // safe to do unchecked math here as it is modulo 2^24
             unchecked {
                 tokenId = (tokenId + 1) & MAX_UINT24;
@@ -279,6 +274,17 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
+    ///@dev Refund any overpayment
+    function _refundOverpayment(uint256 unitPrice, uint256 quantity) internal {
+        unchecked {
+            // can't underflow because payment was already validated; even if it did, it would just revert
+            uint256 overpayment = msg.value - (unitPrice * quantity);
+            if (overpayment != 0) {
+                SafeTransferLib.safeTransferETH(msg.sender, overpayment);
+            }
+        }
+    }
+
     ///@dev Check if a specific token has been finalized. Does not check if token exists.
     function _isFinalized(uint256 xxyyzz) internal view returns (bool) {
         return _getExtraData(xxyyzz) == FINALIZED;
@@ -290,7 +296,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      *      i.e., whether it does not currently exist and has not been finalized. It also allows for avoiding
      *      an extra SLOAD in cases when checking both owner/existence and finalization status.
      */
-    function _loadRawOwnershipSlot(uint256 id) internal view returns (uint256 result) {
+    function _packedOwnershipSlot(uint256 id) internal view returns (uint256 result) {
         assembly ("memory-safe") {
             // since all ids are < uint24, this basically just clears the 0-slot before writing 4 bytes of slot seed
             mstore(0x00, id)
@@ -300,7 +306,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     function _checkCallerIsOwnerAndNotFinalized(uint256 id) internal view {
-        uint256 rawSlot = _loadRawOwnershipSlot(id);
+        uint256 rawSlot = _packedOwnershipSlot(id);
         // clean and cast to address
         address owner = address(uint160(rawSlot));
         if ((rawSlot) > type(uint160).max) {

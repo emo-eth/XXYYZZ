@@ -9,12 +9,10 @@ contract CommitReveal {
 
     uint256 public immutable COMMITMENT_LIFESPAN;
     uint256 public immutable COMMITMENT_DELAY;
-    uint256 public immutable MAX_BATCH_SIZE;
 
-    constructor(uint256 commitmentLifespan, uint256 commitmentDelay, uint256 maxBatchSize) {
+    constructor(uint256 commitmentLifespan, uint256 commitmentDelay) {
         COMMITMENT_LIFESPAN = commitmentLifespan;
         COMMITMENT_DELAY = commitmentDelay;
-        MAX_BATCH_SIZE = maxBatchSize;
     }
 
     ///@dev mapping of user to key to commitment hash to timestamp.
@@ -27,23 +25,6 @@ contract CommitReveal {
      */
     function commit(bytes32 commitment) public {
         commitments[msg.sender][commitment] = block.timestamp;
-    }
-
-    /**
-     * @notice Commit multiple hashes to the contract, to be retrieved and verified after a delay. A commitment is
-     *         valid only after COMMITMENT_DELAY seconds have passed, and is only valid for COMMITMENT_LIFESPAN
-     *         seconds.
-     */
-    function batchCommit(bytes32[] calldata _commitments) public {
-        if (_commitments.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        for (uint256 i = 0; i < _commitments.length;) {
-            commit(_commitments[i]);
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /**

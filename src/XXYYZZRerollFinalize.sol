@@ -48,34 +48,18 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
     }
 
-    /**
-     * @notice Burn and re-mint a number of tokens with specific hex values.
-     * @param oldIds The 6-hex-digit token IDs to burn
-     * @param newIds The 6-hex-digit token IDs to mint
-     * @param salts The salts used in the commitments for the new ID commitments
-     */
-    function batchRerollSpecific(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32[] calldata salts)
-        public
-        payable
-    {
-        if (oldIds.length != newIds.length || oldIds.length != salts.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        unchecked {
-            _validatePayment(REROLL_PRICE, oldIds.length);
-        }
-        for (uint256 i; i < oldIds.length;) {
-            _rerollSpecific(oldIds[i], newIds[i], salts[i]);
-            unchecked {
-                ++i;
-            }
+    function rerollSpecificUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
+        _validatePayment(REROLL_PRICE, 1);
+        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
+            revert Unavailable();
         }
     }
 
-    function batchRerollSpecific(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt) public payable {
+    function batchRerollSpecific(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
+        public
+        payable
+        returns (bool[] memory)
+    {
         if (oldIds.length != newIds.length) {
             revert ArrayLengthMismatch();
         }
@@ -94,6 +78,44 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         }
     }
 
+    function batchRerollSpecificUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
+        public
+        payable
+        returns (bool[] memory)
+    {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        unchecked {
+            _validatePayment(REROLL_PRICE, oldIds.length);
+        }
+        bool[] memory rerolled = new bool[](oldIds.length);
+        uint256 quantityRerolled;
+        for (uint256 i; i < oldIds.length;) {
+            if (_rerollSpecificUnprotected(oldIds[i], newIds[i])) {
+                rerolled[i] = true;
+                unchecked {
+                    ++quantityRerolled;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        // if none were rerolled, revert to avoid wasting gas
+        if (quantityRerolled == 0) {
+            revert NoneAvailable();
+        }
+        // refund any overpayment
+        unchecked {
+            _refundOverpayment(REROLL_PRICE, oldIds.length - quantityRerolled);
+        }
+        return rerolled;
+    }
+
     /**
      * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
      */
@@ -107,30 +129,17 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     /**
-     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them.
+     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
      */
-    function batchRerollSpecificAndFinalize(
-        uint256[] calldata oldIds,
-        uint256[] calldata newIds,
-        bytes32[] calldata salts
-    ) public payable {
-        if (oldIds.length != newIds.length || oldIds.length != salts.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
+    function rerollSpecificAndFinalizeUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
         unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, oldIds.length);
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
         }
-        for (uint256 i; i < oldIds.length;) {
-            uint256 newId = newIds[i];
-            _rerollSpecific(oldIds[i], newId, salts[i]);
-            _finalize(newId);
-            unchecked {
-                ++i;
-            }
+        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
+            revert Unavailable();
         }
+        // won't re-validate price, but above function already did
+        _finalize(newXXYYZZ);
     }
 
     /**
@@ -164,6 +173,47 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         }
     }
 
+    function batchRerollSpecificAndFinalizeUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
+        public
+        payable
+        returns (bool[] memory)
+    {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        uint256 cumulativePrice;
+        unchecked {
+            cumulativePrice = REROLL_PRICE + FINALIZE_PRICE;
+            _validatePayment(cumulativePrice, oldIds.length);
+        }
+        bool[] memory rerolled = new bool[](oldIds.length);
+        uint256 quantityRerolled;
+        for (uint256 i; i < oldIds.length;) {
+            if (_rerollSpecificUnprotected(oldIds[i], newIds[i])) {
+                _finalize(newIds[i]);
+                rerolled[i] = true;
+                unchecked {
+                    ++quantityRerolled;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        // if none were rerolled, revert to avoid wasting gas
+        if (quantityRerolled == 0) {
+            revert NoneAvailable();
+        }
+        // refund any overpayment
+        unchecked {
+            _refundOverpayment(cumulativePrice, oldIds.length - quantityRerolled);
+        }
+        return rerolled;
+    }
+
     ///@dev Validate a reroll and then burn and re-mint a token with a new hex ID
     function _reroll(uint256 oldXXYYZZ, uint256 seed) internal {
         _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
@@ -179,6 +229,23 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         // burn old token
         _burn(oldXXYYZZ);
         _mintSpecific(newXXYYZZ, salt);
+    }
+
+    /**
+     * @dev Validate an old tokenId is rerollable, mint a token with a specific new hex ID (if available)
+     *      and burn the old token.
+     * @param oldXXYYZZ The old ID to reroll
+     * @param newXXYYZZ The new ID to mint
+     * @return Whether the mint succeeded, ie, the new ID was available
+     */
+    function _rerollSpecificUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) internal returns (bool) {
+        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
+        // only burn old token if mint succeeded
+        if (_mintSpecificUnprotected(newXXYYZZ)) {
+            _burn(oldXXYYZZ);
+            return true;
+        }
+        return false;
     }
 
     ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID

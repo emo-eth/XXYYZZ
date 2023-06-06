@@ -7,6 +7,7 @@ remappings = [
     'solady/=lib/solady/src/',
     'solady-test/=lib/solady/test/',
     'solarray/=lib/solarray/src/',
+    'forge-std/=lib/forge-std/src/',
 ]
 bytecode_hash = 'none'
 cbor_metadata = false

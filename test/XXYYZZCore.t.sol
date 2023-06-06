@@ -49,69 +49,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
         );
     }
 
-    function testComputeCommitments(uint24[] memory xxyyzzs) public {
-        uint256[] memory copied = new uint256[](xxyyzzs.length);
-        bytes32[] memory salts = new bytes32[](xxyyzzs.length);
-        for (uint256 i = 0; i < xxyyzzs.length; i++) {
-            copied[i] = uint256(xxyyzzs[i]);
-
-            salts[i] = bytes32(uint256(xxyyzzs[i]) + 1);
-        }
-        bytes32[] memory hashes = test.computeCommitments(address(this), copied, salts);
-        bytes32[] memory individuallyComputed = new bytes32[](xxyyzzs.length);
-        for (uint256 i = 0; i < xxyyzzs.length; i++) {
-            individuallyComputed[i] = test.computeCommitment(address(this), xxyyzzs[i], salts[i]);
-        }
-        assertEq(hashes.length, xxyyzzs.length);
-        for (uint256 i = 0; i < hashes.length; i++) {
-            assertEq(hashes[i], test.computeCommitment(address(this), xxyyzzs[i], salts[i]));
-        }
-    }
-
-    function testComputeCommitments_ArrayLengthMismatch() public {
-        uint256[] memory ids = new uint256[](3);
-        bytes32[] memory salts = new bytes32[](2);
-        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
-        test.computeCommitments(address(this), ids, salts);
-    }
-
     function testMintMany() public {
         test.mint{value: mintPrice * 3}(3);
         assertEq(test.balanceOf(address(this)), 3);
     }
 
-    // function testMintMany_MaxSupply() public {
-    //     test.mint{value: mintPrice * 3}(3);
-    //     uint256 max = test.MAX_SUPPLY();
-    //     vm.expectRevert(XXYYZZCore.MaximumSupplyExceeded.selector);
-    //     test.mint{value: mintPrice * max}(max);
-    // }
-
     function testMint() public {
         test.mint{value: mintPrice}();
         assertEq(test.balanceOf(address(this)), 1);
-    }
-
-    function testBatchMintSpecific() public {
-        bytes32[] memory hashes = new bytes32[](3);
-        hashes[0] = test.computeCommitment(address(this), 0x123456, bytes32("1234"));
-        hashes[1] = test.computeCommitment(address(this), 0x123457, bytes32("1234"));
-        hashes[2] = test.computeCommitment(address(this), 0x123458, bytes32("1234"));
-        test.batchCommit(hashes);
-        vm.warp(block.timestamp + 2 minutes);
-        bytes32[] memory salts = new bytes32[](3);
-        salts[0] = bytes32("1234");
-        salts[1] = bytes32("1234");
-        salts[2] = bytes32("1234");
-        uint256[] memory ids = new uint256[](3);
-        ids[0] = 0x123456;
-        ids[1] = 0x123457;
-        ids[2] = 0x123458;
-        test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
-
-        salts = new bytes32[](0);
-        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
-        test.batchMintSpecific{value: mintPrice * 3}(ids, salts);
     }
 
     function testBatchMintSpecific2() public {
@@ -393,33 +338,6 @@ contract XXYYZZCoreTest is Test, TestPlus {
         vm.warp(block.timestamp + 2 minutes);
     }
 
-    function testBatchRerollSpecificAndFinalize() public {
-        _mintSpecific(0, bytes32(0));
-        _mintSpecific(1, bytes32(0));
-        _mintSpecific(2, bytes32(0));
-        _mintSpecific(3, bytes32(0));
-        test.burn(2, false);
-        test.burn(3, false);
-
-        uint256[] memory ids = new uint256[](2);
-        ids[1] = 1;
-        uint256[] memory newIds = new uint256[](2);
-        newIds[0] = 2;
-        newIds[1] = 3;
-        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
-        test.batchRerollSpecificAndFinalize{value: (rerollSpecificPrice + finalizePrice) * 2}(
-            ids, ids, new bytes32[](0)
-        );
-
-        test.batchRerollSpecificAndFinalize{value: (rerollSpecificPrice + finalizePrice) * 2}(
-            ids, newIds, new bytes32[](2)
-        );
-        assertEq(test.ownerOf(2), address(this));
-        assertEq(test.ownerOf(3), address(this));
-        assertTrue(test.isFinalized(2));
-        assertTrue(test.isFinalized(3));
-    }
-
     function testBatchRerollSpecificAndFinalizeBatch() public {
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
@@ -452,29 +370,6 @@ contract XXYYZZCoreTest is Test, TestPlus {
         uint256[] memory ids = new uint256[](2);
         ids[1] = 1;
         test.batchReroll{value: rerollPrice * 2}(ids);
-    }
-
-    function testBatchRerollSpecific() public {
-        _mintSpecific(0, bytes32(0));
-        _mintSpecific(1, bytes32(0));
-        _mintSpecific(2, bytes32(0));
-        _mintSpecific(3, bytes32(0));
-        test.burn(2, false);
-        test.burn(3, false);
-        uint256[] memory oldIds = new uint256[](2);
-        oldIds[0] = 0;
-        oldIds[1] = 1;
-        uint256[] memory newIds = new uint256[](2);
-        newIds[0] = 2;
-        newIds[1] = 3;
-        bytes32[] memory salts = new bytes32[](2);
-
-        vm.expectRevert(XXYYZZCore.ArrayLengthMismatch.selector);
-        test.batchRerollSpecific(oldIds, newIds, new bytes32[](0));
-
-        test.batchRerollSpecific{value: rerollSpecificPrice * 2}(oldIds, newIds, salts);
-        assertEq(test.ownerOf(2), address(this));
-        assertEq(test.ownerOf(3), address(this));
     }
 
     function _mintSpecific(uint256 id, bytes32 salt) internal {
@@ -526,13 +421,13 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.burn(0, false);
     }
 
-    function testBulkBurn() public {
+    function testBatchBurn() public {
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
         uint256[] memory ids = new uint256[](2);
         ids[0] = 0;
         ids[1] = 1;
-        test.bulkBurn(ids, false);
+        test.batchBurn(ids, false);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
@@ -542,14 +437,14 @@ contract XXYYZZCoreTest is Test, TestPlus {
         _mintSpecific(1, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), true);
         vm.prank(makeAddr("not owner"));
-        test.bulkBurn(ids, false);
+        test.batchBurn(ids, false);
 
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), false);
         vm.prank(makeAddr("not owner"));
-        vm.expectRevert(XXYYZZCore.BulkBurnerNotApprovedForAll.selector);
-        test.bulkBurn(ids, false);
+        vm.expectRevert(XXYYZZCore.BatchBurnerNotApprovedForAll.selector);
+        test.batchBurn(ids, false);
     }
 
     function testTotalSupplyNumMintedNumBurned(uint256 numMint, uint256 numBurn) public {
@@ -566,12 +461,12 @@ contract XXYYZZCoreTest is Test, TestPlus {
         assertEq(test.numBurned(), numBurn);
     }
 
-    function testBulkBurn_NoIds() public {
+    function testBatchBurn_NoIds() public {
         vm.expectRevert(XXYYZZCore.NoIdsProvided.selector);
-        test.bulkBurn(new uint256[](0), false);
+        test.batchBurn(new uint256[](0), false);
     }
 
-    function testBulkBurn_OwnerMismatch() public {
+    function testBatchBurn_OwnerMismatch() public {
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
         test.transferFrom(address(this), makeAddr("not owner"), 0);
@@ -583,7 +478,7 @@ contract XXYYZZCoreTest is Test, TestPlus {
         startHoax(makeAddr("not owner"), 1 ether);
 
         vm.expectRevert(XXYYZZCore.OwnerMismatch.selector);
-        test.bulkBurn(ids, false);
+        test.batchBurn(ids, false);
     }
 
     function _rerollSpecific(uint256 oldId, uint256 newId, bytes32 salt) internal {

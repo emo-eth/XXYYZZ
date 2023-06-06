@@ -30,14 +30,4 @@ contract XXYYZZFinalizeRerollTest is Test, TestPlus {
         finalizePrice = test.FINALIZE_PRICE();
         allowEther = true;
     }
-
-    function testBatchMintSpecific() public {
-        uint256[] memory ids = new uint256[](6);
-        bytes32[] memory salts = new bytes32[](6);
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchMintSpecific(ids, salts);
-
-        vm.expectRevert(CommitReveal.MaxBatchSizeExceeded.selector);
-        test.batchMintSpecific(ids, bytes32(0));
-    }
 }
