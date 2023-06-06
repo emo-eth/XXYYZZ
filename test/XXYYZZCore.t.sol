@@ -6,7 +6,7 @@ import {Test} from "forge-std/Test.sol";
 // import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
 import {XXYYZZ} from "../src/XXYYZZ.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
-import {CommitReveal} from "emocore/CommitReveal.sol";
+import {CommitReveal} from "../src/lib/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Solarray} from "solarray/Solarray.sol";
 

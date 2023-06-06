@@ -5,7 +5,7 @@ import {TestPlus} from "solady-test/utils/TestPlus.sol";
 import {Test} from "forge-std/Test.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {XXYYZZMetadataImpl as XXYYZZ} from "./helpers/XXYYZZMetadata.sol";
-import {CommitReveal} from "emocore/CommitReveal.sol";
+import {CommitReveal} from "../src/lib/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
