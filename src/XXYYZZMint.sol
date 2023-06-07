@@ -90,18 +90,33 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @param ids The 6-hex-digit token IDs to mint
      * @param salt The salt used in the batch commitment
      */
-    function batchMintSpecific(uint256[] calldata ids, bytes32 salt) public payable {
+    function batchMintSpecific(uint256[] calldata ids, bytes32 salt) public payable returns (bool[] memory) {
         if (ids.length > MAX_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
-        _checkMintAndIncrementNumMinted(ids.length);
+        _validateTimestamp();
+        _validatePayment(MINT_PRICE, ids.length);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
+        _assertCommittedReveal(computedCommitment);
+        bool[] memory minted = new bool[](ids.length);
+        uint256 quantityMinted;
         for (uint256 i; i < ids.length;) {
-            _mintSpecificWithCommitment(ids[i], computedCommitment);
+            if (_mintSpecificUnprotected(ids[i])) {
+                minted[i] = true;
+                unchecked {
+                    ++quantityMinted;
+                }
+            }
             unchecked {
                 ++i;
             }
         }
+        if (quantityMinted == 0) {
+            revert NoneAvailable();
+        }
+
+        _incrementNumMintedAndRefundOverpayment(quantityMinted);
+        return minted;
     }
 
     function batchMintSpecificUnprotected(uint256[] calldata ids) public payable returns (bool[] memory) {
@@ -161,6 +176,16 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
         // increment supply before minting
         _numMinted = uint64(newAmount);
+        return newAmount;
+    }
+
+    function _incrementNumMintedAndRefundOverpayment(uint256 numMinted) internal returns (uint256) {
+        uint256 newAmount;
+        unchecked {
+            newAmount = _numMinted + numMinted;
+        }
+        _numMinted = uint64(newAmount);
+        _refundOverpayment(MINT_PRICE, numMinted);
         return newAmount;
     }
 

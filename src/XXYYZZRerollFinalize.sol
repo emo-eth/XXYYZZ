@@ -150,6 +150,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     function batchRerollSpecificAndFinalize(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
         public
         payable
+        returns (bool[] memory)
     {
         if (oldIds.length != newIds.length) {
             revert ArrayLengthMismatch();
