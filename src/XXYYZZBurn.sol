@@ -45,8 +45,10 @@ abstract contract XXYYZZBurn is XXYYZZCore {
             }
         }
         // validate that msg.sender has approval to burn all tokens
-        if (!(initialTokenOwner == msg.sender || isApprovedForAll(initialTokenOwner, msg.sender))) {
-            revert BatchBurnerNotApprovedForAll();
+        if (initialTokenOwner != msg.sender) {
+            if (!isApprovedForAll(initialTokenOwner, msg.sender)) {
+                revert BatchBurnerNotApprovedForAll();
+            }
         }
         // safe because there are at most 2^24 tokens, and ownerships are checked
         unchecked {

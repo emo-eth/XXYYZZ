@@ -65,7 +65,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
      * @notice Withdraws all funds from the contract to the current owner. onlyOwner.
      */
     function withdraw() public onlyOwner {
-        assembly {
+        assembly ("memory-safe") {
             let succ := call(gas(), caller(), selfbalance(), 0, 0, 0, 0)
             // revert with returndata if call failed
             if iszero(succ) {
@@ -106,7 +106,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     function name() public pure override returns (string memory) {
         // note that this is unsafe to call internally, as it abi-encodes the name and
         // performs a low-level return
-        assembly {
+        assembly ("memory-safe") {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
             // mstore(0x46, 0x06616263313233)
@@ -120,7 +120,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     function symbol() public pure override returns (string memory) {
         // note that this is unsafe to call internally, as it abi-encodes the symbol and
         // performs a low-level return
-        assembly {
+        assembly ("memory-safe") {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
             // mstore(0x46, 0x06616263313233)
@@ -164,7 +164,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         pure
         returns (bytes32 committmentHash)
     {
-        assembly {
+        assembly ("memory-safe") {
             // shift sender to top 160 bits; id stays in bottom 24
             mstore(0, or(shl(96, sender), and(id, MAX_UINT24)))
             mstore(0x20, salt)
@@ -187,7 +187,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         pure
         returns (bytes32 commitmentHash)
     {
-        assembly {
+        assembly ("memory-safe") {
             // hash contents of array, without length
             let arrayHash :=
                 keccak256(

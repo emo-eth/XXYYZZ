@@ -42,7 +42,7 @@ contract CommitReveal {
         }
         uint256 commitmentLifespan = COMMITMENT_LIFESPAN;
         uint256 commitmentDelay = COMMITMENT_DELAY;
-        assembly {
+        assembly ("memory-safe") {
             // if the time difference is greater than the commitment lifespan,
             // the commitment has expired
             // if the time difference is less than the commitment delay, the
