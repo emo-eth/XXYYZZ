@@ -7,7 +7,6 @@ abstract contract XXYYZZMint is XXYYZZCore {
     uint256 public immutable MAX_MINT_CLOSE_TIMESTAMP;
 
     constructor(address initialOwner, uint256 maxBatchSize) XXYYZZCore(initialOwner, maxBatchSize) {
-        _initializeOwner(initialOwner);
         MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 10 days;
         mintCloseTimestamp = uint64(MAX_MINT_CLOSE_TIMESTAMP);
     }
@@ -31,7 +30,6 @@ abstract contract XXYYZZMint is XXYYZZCore {
      */
     function mint() public payable {
         uint256 newAmount = _checkMintAndIncrementNumMinted(1);
-
         // get pseudorandom hex id – doesn't need to be derived from caller
         uint256 tokenId = _findAvailableHex(newAmount);
         _mint(msg.sender, tokenId);
@@ -140,17 +138,22 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @return The new number of minted tokens
      */
     function _checkMintAndIncrementNumMinted(uint256 quantityRequested) internal returns (uint256) {
-        _validatePayment(MINT_PRICE, quantityRequested);
         _validateTimestamp();
+        _validatePayment(MINT_PRICE, quantityRequested);
 
         // increment supply before minting
-        uint64 newAmount = _numMinted + uint64(quantityRequested);
-        _numMinted = newAmount;
+        uint256 newAmount;
+        // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
+        unchecked {
+            newAmount = _numMinted + uint64(quantityRequested);
+        }
+        _numMinted = uint64(newAmount);
         return newAmount;
     }
 
     function _incrementNumMintedAndRefundOverpayment(uint256 numMinted) internal returns (uint256) {
         uint256 newAmount;
+        // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
         unchecked {
             newAmount = _numMinted + numMinted;
         }

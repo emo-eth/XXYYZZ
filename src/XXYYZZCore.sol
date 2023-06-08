@@ -211,7 +211,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         _assertCommittedReveal(computedCommitment);
 
         // don't allow minting of tokens that were finalized and then burned
-        if (_packedOwnershipSlot(xxyyzz) != 0) {
+        if (_isFinalized(xxyyzz)) {
             revert AlreadyFinalized();
         }
         _mint(msg.sender, xxyyzz);
@@ -265,7 +265,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
-    ///@dev Validate msg value is equal to price
+    ///@dev Validate msg value is equal to total price
     function _validatePayment(uint256 unitPrice, uint256 quantity) internal view {
         // can't overflow because there are at most uint24 tokens, and existence is checked for each token down the line
         unchecked {
@@ -313,10 +313,6 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         address owner = address(uint160(packedSlot));
         if ((packedSlot) > type(uint160).max) {
             revert AlreadyFinalized();
-        }
-        // if completely empty, token does not exist
-        if (packedSlot == 0) {
-            revert TokenDoesNotExist();
         }
         // check that caller is owner
         if (owner != msg.sender) {

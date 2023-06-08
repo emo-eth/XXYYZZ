@@ -42,7 +42,7 @@
   },
   {
     "inputs": [],
-    "name": "BulkBurnerNotApprovedForAll",
+    "name": "BatchBurnerNotApprovedForAll",
     "type": "error"
   },
   {
@@ -103,6 +103,11 @@
   },
   {
     "inputs": [],
+    "name": "NoneAvailable",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "NotOwnerNorApproved",
     "type": "error"
   },
@@ -149,6 +154,11 @@
   {
     "inputs": [],
     "name": "Unauthorized",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "Unavailable",
     "type": "error"
   },
   {
@@ -402,12 +412,17 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32[]",
-        "name": "_commitments",
-        "type": "bytes32[]"
+        "internalType": "uint256[]",
+        "name": "ids",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "bool",
+        "name": "onlyFinalized",
+        "type": "bool"
       }
     ],
-    "name": "batchCommit",
+    "name": "batchBurn",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -439,7 +454,13 @@
       }
     ],
     "name": "batchMintSpecific",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -449,15 +470,16 @@
         "internalType": "uint256[]",
         "name": "ids",
         "type": "uint256[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "salts",
-        "type": "bytes32[]"
       }
     ],
-    "name": "batchMintSpecific",
-    "outputs": [],
+    "name": "batchMintSpecificUnprotected",
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -493,53 +515,13 @@
       }
     ],
     "name": "batchRerollSpecific",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
+    "outputs": [
       {
-        "internalType": "uint256[]",
-        "name": "oldIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "newIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "salts",
-        "type": "bytes32[]"
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
       }
     ],
-    "name": "batchRerollSpecific",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256[]",
-        "name": "oldIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "newIds",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "salts",
-        "type": "bytes32[]"
-      }
-    ],
-    "name": "batchRerollSpecificAndFinalize",
-    "outputs": [],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -562,7 +544,13 @@
       }
     ],
     "name": "batchRerollSpecificAndFinalize",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -570,18 +558,48 @@
     "inputs": [
       {
         "internalType": "uint256[]",
-        "name": "ids",
+        "name": "oldIds",
         "type": "uint256[]"
       },
       {
-        "internalType": "bool",
-        "name": "onlyFinalized",
-        "type": "bool"
+        "internalType": "uint256[]",
+        "name": "newIds",
+        "type": "uint256[]"
       }
     ],
-    "name": "bulkBurn",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "name": "batchRerollSpecificAndFinalizeUnprotected",
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "oldIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "newIds",
+        "type": "uint256[]"
+      }
+    ],
+    "name": "batchRerollSpecificUnprotected",
+    "outputs": [
+      {
+        "internalType": "bool[]",
+        "name": "",
+        "type": "bool[]"
+      }
+    ],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -712,35 +730,6 @@
         "internalType": "bytes32",
         "name": "committmentHash",
         "type": "bytes32"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256[]",
-        "name": "ids",
-        "type": "uint256[]"
-      },
-      {
-        "internalType": "bytes32[]",
-        "name": "salts",
-        "type": "bytes32[]"
-      }
-    ],
-    "name": "computeCommitments",
-    "outputs": [
-      {
-        "internalType": "bytes32[]",
-        "name": "commitmentHashes",
-        "type": "bytes32[]"
       }
     ],
     "stateMutability": "pure",
@@ -900,6 +889,19 @@
       }
     ],
     "name": "mintSpecific",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "xxyyzz",
+        "type": "uint256"
+      }
+    ],
+    "name": "mintSpecificUnprotected",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
@@ -1076,6 +1078,42 @@
       }
     ],
     "name": "rerollSpecificAndFinalize",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "oldXXYYZZ",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newXXYYZZ",
+        "type": "uint256"
+      }
+    ],
+    "name": "rerollSpecificAndFinalizeUnprotected",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "oldXXYYZZ",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "newXXYYZZ",
+        "type": "uint256"
+      }
+    ],
+    "name": "rerollSpecificUnprotected",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"

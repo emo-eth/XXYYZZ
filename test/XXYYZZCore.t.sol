@@ -280,11 +280,6 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.rerollSpecific{value: rerollSpecificPrice + 1}(0, 0, bytes32(0));
     }
 
-    function testRerollSpecific_TokenDoesNotExist() public {
-        vm.expectRevert(ERC721.TokenDoesNotExist.selector);
-        test.rerollSpecific{value: rerollSpecificPrice}(0, 0, bytes32(0));
-    }
-
     function testRerollSpecific_notOwner() public {
         _mintSpecific(0, bytes32(0));
         test.setApprovalForAll(makeAddr("not owner"), true);
