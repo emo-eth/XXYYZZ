@@ -12,15 +12,30 @@ contract CommitRevealTest is Test {
         test = new TestCommitReveal();
     }
 
+    /**
+     * @notice deal with via-ir block.timestamp issue
+     */
+    function _timestamp() external view returns (uint256) {
+        return block.timestamp;
+    }
+
     function testCommitReveal() public {
         bytes32 commitment = keccak256(abi.encode("test"));
-        uint256 originalTimestamp = block.timestamp;
+        uint256 originalTimestamp = this._timestamp();
+        emit log_named_uint("originalTimestamp", originalTimestamp);
         test.commit(commitment);
         vm.expectRevert(abi.encodeWithSelector(CommitReveal.InvalidCommitment.selector, originalTimestamp));
         test.assertCommittedReveal(commitment);
-        vm.warp(originalTimestamp + test.COMMITMENT_DELAY());
+        uint256 revealTimestamp = originalTimestamp + test.COMMITMENT_DELAY();
+        emit log_named_uint("warping to revealTimestamp", revealTimestamp);
+        vm.warp(revealTimestamp);
+        emit log_named_uint("block.timestamp after warp", block.timestamp);
         test.assertCommittedReveal(commitment);
-        vm.warp(originalTimestamp + test.COMMITMENT_LIFESPAN() + 1);
+
+        uint256 outOfLifespanTimestamp = originalTimestamp + test.COMMITMENT_LIFESPAN() + 1;
+        emit log_named_uint("warping to outOfLifespanTimestamp", outOfLifespanTimestamp);
+        vm.warp(outOfLifespanTimestamp);
+        emit log_named_uint("block.timestamp after warp", block.timestamp);
         vm.expectRevert(abi.encodeWithSelector(CommitReveal.InvalidCommitment.selector, originalTimestamp));
         test.assertCommittedReveal(commitment);
     }

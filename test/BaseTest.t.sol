@@ -39,4 +39,13 @@ contract BaseTest is Test, TestPlus {
         test.commit(computedCommitment);
         vm.warp(block.timestamp + 2 minutes);
     }
+
+    /**
+     * @notice when using vm.warp, retrieve block.timestamp in a way that
+     *         via-ir cannot optimize away, since it assumes expressions using
+     *         block.timestamp are constant
+     */
+    function _timestamp() external view returns (uint256) {
+        return block.timestamp;
+    }
 }

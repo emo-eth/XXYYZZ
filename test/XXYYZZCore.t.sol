@@ -42,7 +42,7 @@ contract XXYYZZCoreTest is BaseTest {
         uint256[] memory ids = Solarray.uint256s(0, 1, 2);
         bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
         test.commit(commitmentHash);
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
         test.batchMintSpecific{value: mintPrice * 3}(ids, salt);
         // assert ownerships
         assertEq(test.ownerOf(0), address(this));
@@ -55,7 +55,7 @@ contract XXYYZZCoreTest is BaseTest {
         uint256[] memory ids = Solarray.uint256s(0, 1, 200000000000);
         bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
         test.commit(commitmentHash);
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
         vm.expectRevert(XXYYZZCore.InvalidHex.selector);
         test.batchMintSpecific{value: mintPrice * 3}(ids, salt);
     }
@@ -65,7 +65,7 @@ contract XXYYZZCoreTest is BaseTest {
         uint256[] memory ids = Solarray.uint256s(0, 1, 2);
         bytes32 commitmentHash = test.computeBatchCommitment(address(this), ids, salt);
         test.commit(commitmentHash);
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
         vm.expectRevert(abi.encodeWithSelector(CommitReveal.InvalidCommitment.selector, 0));
         test.batchMintSpecific{value: mintPrice * 3}(Solarray.uint256s(1, 0, 2), salt);
     }
@@ -74,7 +74,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), 0x123456, bytes32("1234"));
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
 
         test.mintSpecific{value: mintPrice}(0x123456, bytes32("1234"));
         assertEq(test.balanceOf(address(this)), 1);
@@ -138,7 +138,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), xxyyzz, salt);
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
 
         test.mintSpecific{value: mintPrice}(xxyyzz, salt);
         assertEq(test.balanceOf(address(this)), 1);
@@ -166,7 +166,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), 0, bytes32(0));
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
         vm.expectRevert(ERC721.TokenAlreadyExists.selector);
         test.mintSpecific{value: mintPrice}(0, bytes32(0));
     }
@@ -183,7 +183,7 @@ contract XXYYZZCoreTest is BaseTest {
     // }
 
     function testMint_MintClosed() public {
-        vm.warp(block.timestamp + 365 days);
+        vm.warp(this._timestamp() + 365 days);
         vm.expectRevert(XXYYZZCore.MintClosed.selector);
         test.mint{value: mintPrice}();
     }
@@ -192,7 +192,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), 0, bytes32(0));
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
 
         vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.mintSpecific{value: mintPrice - 1}(0, bytes32(0));
@@ -287,7 +287,7 @@ contract XXYYZZCoreTest is BaseTest {
         _mintSpecific(0, bytes32(0));
         bytes32 commitmentHash = test.computeCommitment(address(this), 1, bytes32(0));
         test.commit(commitmentHash);
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
         test.rerollSpecificAndFinalize{value: rerollSpecificPrice + finalizePrice}(0, 1, bytes32(0));
     }
 
@@ -343,7 +343,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), uint24(id), salt);
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
 
         test.mintSpecific{value: mintPrice}(id, salt);
     }
@@ -452,7 +452,7 @@ contract XXYYZZCoreTest is BaseTest {
         bytes32 commitmentHash = test.computeCommitment(address(this), uint24(newId), salt);
         test.commit(commitmentHash);
 
-        vm.warp(block.timestamp + 2 minutes);
+        vm.warp(this._timestamp() + 2 minutes);
 
         test.rerollSpecific{value: rerollSpecificPrice}(oldId, newId, salt);
     }
