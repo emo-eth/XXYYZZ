@@ -169,7 +169,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         returns (bytes32 commitmentHash)
     {
         assembly {
-            // hash contents of array minus length
+            // hash contents of array, without length
             let arrayHash :=
                 keccak256(
                     // add 0x20 to get start of array contents
@@ -211,13 +211,13 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         _assertCommittedReveal(computedCommitment);
 
         // don't allow minting of tokens that were finalized and then burned
-        if (_isFinalized(xxyyzz)) {
+        if (_packedOwnershipSlot(xxyyzz) != 0) {
             revert AlreadyFinalized();
         }
         _mint(msg.sender, xxyyzz);
     }
 
-    ///@dev Mint a token with a specific hex value without validating it was committed to and is not not finalized
+    ///@dev Mint a token with a specific hex value without validating it was committed to
     function _mintSpecificUnprotected(uint256 xxyyzz) internal returns (bool) {
         // validate ID is valid 6-hex-digit number
         _validateId(xxyyzz);
@@ -278,7 +278,8 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     ///@dev Refund any overpayment
     function _refundOverpayment(uint256 unitPrice, uint256 availableQuantity) internal {
         unchecked {
-            // can't underflow because payment was already validated; even if it did, it would just revert
+            // can't underflow because payment was already validated; even if it did, value would be larger than ether
+            // supply
             uint256 overpayment = msg.value - (unitPrice * availableQuantity);
             if (overpayment != 0) {
                 SafeTransferLib.safeTransferETH(msg.sender, overpayment);
@@ -307,14 +308,14 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     }
 
     function _checkCallerIsOwnerAndNotFinalized(uint256 id) internal view {
-        uint256 rawSlot = _packedOwnershipSlot(id);
+        uint256 packedSlot = _packedOwnershipSlot(id);
         // clean and cast to address
-        address owner = address(uint160(rawSlot));
-        if ((rawSlot) > type(uint160).max) {
+        address owner = address(uint160(packedSlot));
+        if ((packedSlot) > type(uint160).max) {
             revert AlreadyFinalized();
         }
         // if completely empty, token does not exist
-        if (rawSlot == 0) {
+        if (packedSlot == 0) {
             revert TokenDoesNotExist();
         }
         // check that caller is owner

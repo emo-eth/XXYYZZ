@@ -98,6 +98,20 @@ abstract contract XXYYZZMint is XXYYZZCore {
         _validatePayment(MINT_PRICE, ids.length);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
         _assertCommittedReveal(computedCommitment);
+        return _batchMintAndIncrementAndRefund(ids);
+    }
+
+    function batchMintSpecificUnprotected(uint256[] calldata ids) public payable returns (bool[] memory) {
+        if (ids.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        _validateTimestamp();
+        _validatePayment(MINT_PRICE, ids.length);
+
+        return _batchMintAndIncrementAndRefund(ids);
+    }
+
+    function _batchMintAndIncrementAndRefund(uint256[] calldata ids) internal returns (bool[] memory) {
         bool[] memory minted = new bool[](ids.length);
         uint256 quantityMinted;
         for (uint256 i; i < ids.length;) {
@@ -119,63 +133,19 @@ abstract contract XXYYZZMint is XXYYZZCore {
         return minted;
     }
 
-    function batchMintSpecificUnprotected(uint256[] calldata ids) public payable returns (bool[] memory) {
-        if (ids.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        // keep track of which ids were minted
-        bool[] memory minted = new bool[](ids.length);
-        // keep track of how many are minted
-        uint256 quantityAvailable;
-        for (uint256 i; i < ids.length;) {
-            if (_mintSpecificUnprotected(ids[i])) {
-                minted[i] = true;
-                unchecked {
-                    ++quantityAvailable;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        // revert before proceeding to avoid any excess wasted gas
-        if (quantityAvailable == 0) {
-            revert NoneAvailable();
-        }
-
-        _checkMintAndIncrementNumMinted(ids.length, quantityAvailable);
-        // refund for unavailable ids
-        _refundOverpayment(MINT_PRICE, quantityAvailable);
-
-        return minted;
-    }
-
-    ///@dev Validate payment, timestamp, and increment numMinted
-    function _checkMintAndIncrementNumMinted(uint256 quantityRequested) internal returns (uint256) {
-        return _checkMintAndIncrementNumMinted(quantityRequested, quantityRequested);
-    }
-
     /**
      * @dev Check payment and quantity validation – quantityRequested for payment, quantityAvailable for updating
      *      the number of minted tokens, which may be different
      * @param quantityRequested The number of tokens requested by the user, which must be paid for
-     * @param quantityAvailable The number of tokens available to mint, which may be less than quantityRequested
-     *                          Balances for unavailable tokens will be refunded.
      * @return The new number of minted tokens
      */
-    function _checkMintAndIncrementNumMinted(uint256 quantityRequested, uint256 quantityAvailable)
-        internal
-        returns (uint256)
-    {
-        uint256 newAmount = _numMinted + quantityAvailable;
-
-        unchecked {
-            _validatePayment(MINT_PRICE, quantityRequested);
-        }
+    function _checkMintAndIncrementNumMinted(uint256 quantityRequested) internal returns (uint256) {
+        _validatePayment(MINT_PRICE, quantityRequested);
         _validateTimestamp();
 
         // increment supply before minting
-        _numMinted = uint64(newAmount);
+        uint64 newAmount = _numMinted + uint64(quantityRequested);
+        _numMinted = newAmount;
         return newAmount;
     }
 

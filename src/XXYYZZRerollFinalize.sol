@@ -66,16 +66,11 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         if (oldIds.length > MAX_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
-        unchecked {
-            _validatePayment(REROLL_PRICE, oldIds.length);
-        }
+        _validatePayment(REROLL_PRICE, oldIds.length);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
-        for (uint256 i; i < oldIds.length;) {
-            _rerollSpecificWithCommitment(oldIds[i], newIds[i], computedCommitment);
-            unchecked {
-                ++i;
-            }
-        }
+        _assertCommittedReveal(computedCommitment);
+
+        return _batchRerollAndRefund(oldIds, newIds);
     }
 
     function batchRerollSpecificUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
@@ -92,6 +87,87 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         unchecked {
             _validatePayment(REROLL_PRICE, oldIds.length);
         }
+        return _batchRerollAndRefund(oldIds, newIds);
+    }
+
+    /**
+     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
+     */
+    function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
+        unchecked {
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
+        }
+        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
+        // won't re-validate price, but above function already did
+        _finalizeToken(newXXYYZZ, msg.sender);
+    }
+
+    /**
+     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
+     */
+    function rerollSpecificAndFinalizeUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
+        unchecked {
+            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
+        }
+        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
+            revert Unavailable();
+        }
+        // won't re-validate price, but above function already did
+        _finalizeToken(newXXYYZZ, msg.sender);
+    }
+
+    /**
+     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @param salt The salt used in the batch commitment for the new ID commitment
+     */
+    function batchRerollSpecificAndFinalize(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
+        public
+        payable
+        returns (bool[] memory)
+    {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        uint256 combinedPrice;
+
+        unchecked {
+            combinedPrice = REROLL_PRICE + FINALIZE_PRICE;
+        }
+        _validatePayment(combinedPrice, oldIds.length);
+
+        bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
+        _assertCommittedReveal(computedCommitment);
+        return _batchRerollAndFinalizeAndRefund(oldIds, newIds, combinedPrice);
+    }
+
+    function batchRerollSpecificAndFinalizeUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
+        public
+        payable
+        returns (bool[] memory)
+    {
+        if (oldIds.length != newIds.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (oldIds.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        uint256 cumulativePrice;
+        unchecked {
+            cumulativePrice = REROLL_PRICE + FINALIZE_PRICE;
+            _validatePayment(cumulativePrice, oldIds.length);
+        }
+        return _batchRerollAndFinalizeAndRefund(oldIds, newIds, cumulativePrice);
+    }
+
+    function _batchRerollAndRefund(uint256[] calldata oldIds, uint256[] calldata newIds)
+        internal
+        returns (bool[] memory)
+    {
         bool[] memory rerolled = new bool[](oldIds.length);
         uint256 quantityRerolled;
         for (uint256 i; i < oldIds.length;) {
@@ -115,85 +191,16 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         return rerolled;
     }
 
-    /**
-     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
-     */
-    function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
-        }
-        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
-        // won't re-validate price, but above function already did
-        _finalize(newXXYYZZ);
-    }
-
-    /**
-     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
-     */
-    function rerollSpecificAndFinalizeUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
-        unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
-        }
-        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
-            revert Unavailable();
-        }
-        // won't re-validate price, but above function already did
-        _finalize(newXXYYZZ);
-    }
-
-    /**
-     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them.
-     * @param oldIds The 6-hex-digit token IDs to burn
-     * @param newIds The 6-hex-digit token IDs to mint
-     * @param salt The salt used in the batch commitment for the new ID commitment
-     */
-    function batchRerollSpecificAndFinalize(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
-        public
-        payable
-        returns (bool[] memory)
-    {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, oldIds.length);
-        }
-
-        bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
-        for (uint256 i; i < oldIds.length;) {
-            uint256 newId = newIds[i];
-            _rerollSpecificWithCommitment(oldIds[i], newId, computedCommitment);
-            _finalize(newId);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function batchRerollSpecificAndFinalizeUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
-        public
-        payable
-        returns (bool[] memory)
-    {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        uint256 cumulativePrice;
-        unchecked {
-            cumulativePrice = REROLL_PRICE + FINALIZE_PRICE;
-            _validatePayment(cumulativePrice, oldIds.length);
-        }
+    function _batchRerollAndFinalizeAndRefund(
+        uint256[] calldata oldIds,
+        uint256[] calldata newIds,
+        uint256 cumulativePrice
+    ) internal returns (bool[] memory) {
         bool[] memory rerolled = new bool[](oldIds.length);
         uint256 quantityRerolled;
         for (uint256 i; i < oldIds.length;) {
             if (_rerollSpecificUnprotected(oldIds[i], newIds[i])) {
-                _finalize(newIds[i]);
+                _finalizeToken(newIds[i], msg.sender);
                 rerolled[i] = true;
                 unchecked {
                     ++quantityRerolled;
@@ -245,14 +252,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
             return true;
         }
         return false;
-    }
-
-    ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID
-    function _rerollSpecificWithCommitment(uint256 oldId, uint256 newId, bytes32 computedCommitment) internal {
-        _checkCallerIsOwnerAndNotFinalized(oldId);
-        // burn old token
-        _burn(oldId);
-        _mintSpecificWithCommitment(newId, computedCommitment);
     }
 
     //////////////
