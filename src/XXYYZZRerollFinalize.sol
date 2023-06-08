@@ -3,18 +3,29 @@ pragma solidity ^0.8.17;
 
 import {XXYYZZCore} from "./XXYYZZCore.sol";
 
+/**
+ * @title XXYYZZRerollFinalize
+ * @author emo.eth
+ * @notice This contract handles "rerolling" and "finalizing" tokens.
+ *         Rerolling allows users to burn a token they own in exchange for a new one. The new token may be either
+ *         pseudorandom, or a specific color, when using one of the "Specific" methods.
+ *         Finalizing allows users
+ *
+ */
 abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     ////////////
     // REROLL //
     ////////////
     /**
      * @notice Burn a token you own and mint a new one with a pseudorandom hex value.
-     * @param oldXXYYZZ The 6-hex-digit token ID to burn
+     * @param oldId The 6-hex-digit token ID to burn
      */
-    function reroll(uint256 oldXXYYZZ) public payable {
+    function reroll(uint256 oldId) public payable {
         _validatePayment(REROLL_PRICE, 1);
-        // use the caller's seed to derive the new token ID
-        _reroll(oldXXYYZZ, uint160(msg.sender));
+        // use the caller as the seed to derive the new token ID
+        // this means multiple calls in the same block will be gas-inefficient
+        // which may somewhat discourage botting
+        _rerollWithSeed(oldId, uint160(msg.sender));
     }
 
     /**
@@ -22,14 +33,13 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      * @param ids The 6-hex-digit token IDs to burn
      */
     function batchReroll(uint256[] calldata ids) public payable {
-        // unchecked block is safe because there are at most 2^24 tokens
-        unchecked {
-            _validatePayment(REROLL_PRICE, ids.length);
-        }
-        // use the caller's seed to derive the new token IDs
+        _validatePayment(REROLL_PRICE, ids.length);
+        // use the caller as the seed to derive the new token IDs
+        // this means multiple calls in the same block will be gas-inefficient
+        // which may somewhat discourage botting
         uint256 seed = uint256(uint160(msg.sender));
         for (uint256 i; i < ids.length;) {
-            _reroll(ids[i], seed);
+            _rerollWithSeed(ids[i], seed);
             unchecked {
                 ++i;
                 ++seed;
@@ -38,82 +48,103 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     /**
-     * @notice Burn and re-mint a token with a specific hex ID
-     * @param oldXXYYZZ The 6-hex-digit token ID to burn
-     * @param newXXYYZZ The 6-hex-digit token ID to mint
+     * @notice Burn and re-mint a token with a specific hex ID. Uses a commit-reveal scheme to prevent front-running.
+     *         Only callable by the owner of the token. Users must call `commit(bytes32)` with the result of
+     *         `computeCommitment(address,uint256,bytes32)` and wait at least COMMITMENT_LIFESPAN seconds before
+     *         calling `rerollSpecific`.
+     * @param oldId The 6-hex-digit token ID to burn
+     * @param newId The 6-hex-digit token ID to mint
      * @param salt The salt used in the commitment for the new ID commitment
      */
-    function rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
+    function rerollSpecific(uint256 oldId, uint256 newId, bytes32 salt) public payable {
         _validatePayment(REROLL_PRICE, 1);
-        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
+        _rerollSpecificWithSalt(oldId, newId, salt);
     }
 
-    function rerollSpecificUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
+    /**
+     * @notice Burn and re-mint a token with a specific hex ID. Does not use a commit-reveal scheme, so it is vulnerable
+     *         to front-running. Only callable by the owner of the token. Users calling this function should use an RPC
+     *         with a private mempool (such as Flashbots) to prevent front-running.
+     * @param oldId The 6-hex-digit token ID to burn
+     * @param newId The 6-hex-digit token ID to mint
+     */
+    function rerollSpecificUnprotected(uint256 oldId, uint256 newId) public payable {
         _validatePayment(REROLL_PRICE, 1);
-        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
+        if (!_rerollSpecificUnprotected(oldId, newId)) {
             revert Unavailable();
         }
     }
 
+    /**
+     * @notice Burn and re-mint a number of tokens with specific hex values. Uses a commit-reveal scheme to prevent
+     *         front-running. Only callable by the owner of the tokens. Users must call `commit(bytes32)` with the
+     *         result of `computeBatchCommitment(address,uint256[],bytes32)` and wait at least COMMITMENT_LIFESPAN
+     *         seconds before calling `batchRerollSpecific`.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @param salt The salt used in the commitment for the new IDs commitment
+     * @return An array of booleans indicating whether each token was successfully rerolled
+     */
     function batchRerollSpecific(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
         public
         payable
         returns (bool[] memory)
     {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        _validatePayment(REROLL_PRICE, oldIds.length);
+        _validateBatchAndPayment(oldIds, newIds, REROLL_PRICE);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         _assertCommittedReveal(computedCommitment);
 
         return _batchRerollAndRefund(oldIds, newIds);
     }
 
+    /**
+     * @notice Burn and re-mint a number of tokens with specific hex values. Does not use a commit-reveal scheme, so it
+     *         is vulnerable to front-running. Only callable by the owner of the tokens. Users calling this function
+     *         should use an RPC with a private mempool (such as Flashbots) to prevent front-running.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @return An array of booleans indicating whether each token was successfully rerolled
+     */
     function batchRerollSpecificUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
         public
         payable
         returns (bool[] memory)
     {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        unchecked {
-            _validatePayment(REROLL_PRICE, oldIds.length);
-        }
+        _validateBatchAndPayment(oldIds, newIds, REROLL_PRICE);
         return _batchRerollAndRefund(oldIds, newIds);
     }
 
     /**
-     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
+     * @notice Burn and re-mint a token with a specific hex ID, then finalize it. Uses a commit-reveal scheme to
+     *         prevent front-running. Only callable by the owner of the token. Users must call `commit(bytes32)`
+     *         with the result of `computeCommitment(address,uint256,bytes32)` and wait at least COMMITMENT_LIFESPAN
+     *         seconds before calling `rerollSpecificAndFinalize`.
+     * @param oldId The 6-hex-digit token ID to burn
+     * @param newId The 6-hex-digit token ID to mint
+     * @param salt The salt used in the commitment for the new ID commitment
      */
-    function rerollSpecificAndFinalize(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) public payable {
-        unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
-        }
-        _rerollSpecific(oldXXYYZZ, newXXYYZZ, salt);
+    function rerollSpecificAndFinalize(uint256 oldId, uint256 newId, bytes32 salt) public payable {
+        _validatePayment(REROLL_AND_FINALIZE_PRICE, 1);
+
+        _rerollSpecificWithSalt(oldId, newId, salt);
         // won't re-validate price, but above function already did
-        _finalizeToken(newXXYYZZ, msg.sender);
+        _finalizeToken(newId, msg.sender);
     }
 
     /**
-     * @notice Burn and re-mint a token with a specific hex ID, then finalize it.
+     * @notice Burn and re-mint a token with a specific hex ID, then finalize it. Does not use a commit-reveal scheme,
+     *         so it is vulnerable to front-running. Only callable by the owner of the token. Users calling this
+     *        function should use an RPC with a private mempool (such as Flashbots) to prevent front-running.
+     * @param oldId The 6-hex-digit token ID to burn
+     * @param newId The 6-hex-digit token ID to mint
      */
-    function rerollSpecificAndFinalizeUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) public payable {
-        unchecked {
-            _validatePayment(REROLL_PRICE + FINALIZE_PRICE, 1);
-        }
-        if (!_rerollSpecificUnprotected(oldXXYYZZ, newXXYYZZ)) {
+    function rerollSpecificAndFinalizeUnprotected(uint256 oldId, uint256 newId) public payable {
+        _validatePayment(REROLL_AND_FINALIZE_PRICE, 1);
+        if (!_rerollSpecificUnprotected(oldId, newId)) {
             revert Unavailable();
         }
         // won't re-validate price, but above function already did
-        _finalizeToken(newXXYYZZ, msg.sender);
+        _finalizeToken(newId, msg.sender);
     }
 
     /**
@@ -121,49 +152,79 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      * @param oldIds The 6-hex-digit token IDs to burn
      * @param newIds The 6-hex-digit token IDs to mint
      * @param salt The salt used in the batch commitment for the new ID commitment
+     * @return An array of booleans indicating whether each token was successfully rerolled
      */
     function batchRerollSpecificAndFinalize(uint256[] calldata oldIds, uint256[] calldata newIds, bytes32 salt)
         public
         payable
         returns (bool[] memory)
     {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        uint256 combinedPrice;
-
-        unchecked {
-            combinedPrice = REROLL_PRICE + FINALIZE_PRICE;
-        }
-        _validatePayment(combinedPrice, oldIds.length);
-
+        _validateBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         _assertCommittedReveal(computedCommitment);
-        return _batchRerollAndFinalizeAndRefund(oldIds, newIds, combinedPrice);
+        return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
     }
 
+    /**
+     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them. Does not use a
+     *         commit-reveal scheme, so it is vulnerable to front-running. Only callable by the owner of the tokens.
+     *         Users calling this function should use an RPC with a private mempool (such as Flashbots) to prevent
+     *         front-running.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @return An array of booleans indicating whether each token was successfully rerolled
+     */
     function batchRerollSpecificAndFinalizeUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
         public
         payable
         returns (bool[] memory)
     {
-        if (oldIds.length != newIds.length) {
-            revert ArrayLengthMismatch();
-        }
-        if (oldIds.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        uint256 cumulativePrice;
-        unchecked {
-            cumulativePrice = REROLL_PRICE + FINALIZE_PRICE;
-            _validatePayment(cumulativePrice, oldIds.length);
-        }
-        return _batchRerollAndFinalizeAndRefund(oldIds, newIds, cumulativePrice);
+        _validateBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
+
+        return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
     }
 
+    //////////////
+    // FINALIZE //
+    //////////////
+
+    /**
+     * @notice Finalize a token, which updates its metadata with a "Finalizer" trait and prevents it from being
+     *         rerolled in the future.
+     * @param id The 6-hex-digit token ID to finalize. Must be owned by the caller.
+     */
+    function finalize(uint256 id) public payable {
+        _validatePayment(FINALIZE_PRICE, 1);
+        _finalize(id);
+    }
+
+    /**
+     * @notice Finalize a number of tokens, which updates their metadata with a "Finalizer" trait and prevents them
+     *         from being rerolled in the future. The caller must pay the finalization price for each token, and must
+     *         own all tokens.
+     * @param ids The 6-hex-digit token IDs to finalize
+     */
+    function batchFinalize(uint256[] calldata ids) public payable {
+        _validatePayment(FINALIZE_PRICE, ids.length);
+        for (uint256 i; i < ids.length;) {
+            _finalize(ids[i]);
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    //////////////
+    // INTERNAL //
+    //////////////
+
+    /**
+     * @dev Internal function to burn and re-mint tokens with a specific hex ID. Does not check initial payment.
+     *      Does refund any overpayment.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @return An array of booleans indicating whether each token was successfully rerolled
+     */
     function _batchRerollAndRefund(uint256[] calldata oldIds, uint256[] calldata newIds)
         internal
         returns (bool[] memory)
@@ -191,11 +252,17 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         return rerolled;
     }
 
-    function _batchRerollAndFinalizeAndRefund(
-        uint256[] calldata oldIds,
-        uint256[] calldata newIds,
-        uint256 cumulativePrice
-    ) internal returns (bool[] memory) {
+    /**
+     * @dev Internal function to burn and re-mint tokens with a specific hex ID, then finalize them. Does not check
+     *     initial payment. Does refund any overpayment.
+     * @param oldIds The 6-hex-digit token IDs to burn
+     * @param newIds The 6-hex-digit token IDs to mint
+     * @return An array of booleans indicating whether each token was successfully rerolled
+     */
+    function _batchRerollAndFinalizeAndRefund(uint256[] calldata oldIds, uint256[] calldata newIds)
+        internal
+        returns (bool[] memory)
+    {
         bool[] memory rerolled = new bool[](oldIds.length);
         uint256 quantityRerolled;
         for (uint256 i; i < oldIds.length;) {
@@ -215,84 +282,75 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
             revert NoneAvailable();
         }
         // refund any overpayment
-        _refundOverpayment(cumulativePrice, quantityRerolled);
+        _refundOverpayment(REROLL_AND_FINALIZE_PRICE, quantityRerolled);
 
         return rerolled;
     }
 
-    ///@dev Validate a reroll and then burn and re-mint a token with a new hex ID
-    function _reroll(uint256 oldXXYYZZ, uint256 seed) internal {
-        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
+    /**
+     * @dev Validate an old tokenId is rerollable, burn it, then mint a token with a pseudorandom
+     *      hex ID.
+     * @param oldId The old ID to reroll
+     * @param seed The seed to use for the reroll
+     *
+     */
+    function _rerollWithSeed(uint256 oldId, uint256 seed) internal {
+        _checkCallerIsOwnerAndNotFinalized(oldId);
         // burn old token
-        _burn(oldXXYYZZ);
+        _burn(oldId);
         uint256 tokenId = _findAvailableHex(seed);
         _mint(msg.sender, tokenId);
     }
 
-    ///@dev Validate a reroll and then burn and re-mint a token with a specific new hex ID
-    function _rerollSpecific(uint256 oldXXYYZZ, uint256 newXXYYZZ, bytes32 salt) internal {
-        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
+    /**
+     * @dev Validate an old tokenId is rerollable, burn it, then mint a token with a specific
+     *     hex ID, validating that the commit-reveal scheme was followed.
+     * @param oldId The old ID to reroll
+     * @param newId The new ID to mint
+     * @param salt The salt used in the commit-reveal scheme
+     */
+    function _rerollSpecificWithSalt(uint256 oldId, uint256 newId, bytes32 salt) internal {
+        _checkCallerIsOwnerAndNotFinalized(oldId);
         // burn old token
-        _burn(oldXXYYZZ);
-        _mintSpecific(newXXYYZZ, salt);
+        _burn(oldId);
+        _mintSpecific(newId, salt);
     }
 
     /**
      * @dev Validate an old tokenId is rerollable, mint a token with a specific new hex ID (if available)
      *      and burn the old token.
-     * @param oldXXYYZZ The old ID to reroll
-     * @param newXXYYZZ The new ID to mint
+     * @param oldId The old ID to reroll
+     * @param newId The new ID to mint
      * @return Whether the mint succeeded, ie, the new ID was available
      */
-    function _rerollSpecificUnprotected(uint256 oldXXYYZZ, uint256 newXXYYZZ) internal returns (bool) {
-        _checkCallerIsOwnerAndNotFinalized(oldXXYYZZ);
+    function _rerollSpecificUnprotected(uint256 oldId, uint256 newId) internal returns (bool) {
+        _checkCallerIsOwnerAndNotFinalized(oldId);
         // only burn old token if mint succeeded
-        if (_mintSpecificUnprotected(newXXYYZZ)) {
-            _burn(oldXXYYZZ);
+        if (_mintSpecificUnprotected(newId)) {
+            _burn(oldId);
             return true;
         }
         return false;
     }
-
-    //////////////
-    // FINALIZE //
-    //////////////
-
     /**
-     * @notice Finalize a token, which updates its metadata with a "Finalizer" trait and prevents it from being
-     *         rerolled in the future.
-     * @param xxyyzz The 6-hex-digit token ID to finalize. Must be owned by the caller.
+     * @dev Internal function to finalize a token, first checking that the caller is the owner and that the token
+     *      has not already been finalized.
+     * @param id The 6-hex-digit token ID to finalize
      */
-    function finalize(uint256 xxyyzz) public payable {
-        _validatePayment(FINALIZE_PRICE, 1);
-        _finalize(xxyyzz);
-    }
 
-    /**
-     * @notice Finalize a number of tokens, which updates their metadata with a "Finalizer" trait and prevents them
-     *         from being rerolled in the future. The caller must pay the finalization price for each token, and must
-     *         own all tokens.
-     * @param ids The 6-hex-digit token IDs to finalize
-     */
-    function batchFinalize(uint256[] calldata ids) public payable {
-        _validatePayment(FINALIZE_PRICE, ids.length);
-        for (uint256 i; i < ids.length;) {
-            _finalize(ids[i]);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    function _finalize(uint256 xxyyzz) internal {
-        _checkCallerIsOwnerAndNotFinalized(xxyyzz);
+    function _finalize(uint256 id) internal {
+        _checkCallerIsOwnerAndNotFinalized(id);
         // set finalized flag
-        _finalizeToken(xxyyzz, msg.sender);
+        _finalizeToken(id, msg.sender);
     }
 
-    ///@dev Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
-    function _finalizeToken(uint256 xxyyzz, address finalizer) internal {
-        finalizers[xxyyzz] = finalizer;
-        _setExtraData(xxyyzz, 1);
+    /**
+     * @dev Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
+     * @param id The 6-hex-digit token ID to finalize
+     * @param finalizer The address of the account finalizing the token
+     */
+    function _finalizeToken(uint256 id, address finalizer) internal {
+        finalizers[id] = finalizer;
+        _setExtraData(id, 1);
     }
 }

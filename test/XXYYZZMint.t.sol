@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {TestPlus} from "solady-test/utils/TestPlus.sol";
-import {Test} from "forge-std/Test.sol";
-// import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {XXYYZZ} from "../src/XXYYZZ.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {CommitReveal} from "../src/lib/CommitReveal.sol";
@@ -11,35 +9,7 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {Solarray} from "solarray/Solarray.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
-contract XXYYZZMintTest is Test, TestPlus {
-    error CannotReceiveEther();
-
-    XXYYZZ test;
-    uint256 mintPrice;
-    uint256 rerollPrice;
-    uint256 rerollSpecificPrice;
-    uint256 finalizePrice;
-    uint256 maxBatchSize;
-    bool allowEther;
-
-    function setUp() public {
-        vm.warp(10_000 days);
-
-        test = new XXYYZZ(address(this),5,false);
-        mintPrice = test.MINT_PRICE();
-        rerollPrice = test.REROLL_PRICE();
-        rerollSpecificPrice = test.REROLL_PRICE();
-        finalizePrice = test.FINALIZE_PRICE();
-        maxBatchSize = test.MAX_BATCH_SIZE();
-        allowEther = true;
-    }
-
-    receive() external payable {
-        if (!allowEther) {
-            revert CannotReceiveEther();
-        }
-    }
-
+contract XXYYZZMintTest is BaseTest {
     function testSetMintCloseTimestamp() public {
         vm.warp(20_000 days);
         test.setMintCloseTimestamp(1);
@@ -121,5 +91,36 @@ contract XXYYZZMintTest is Test, TestPlus {
         uint256[] memory ids = Solarray.uint256s(1, 2);
         vm.expectRevert(XXYYZZCore.InvalidPayment.selector);
         test.batchMintSpecificUnprotected{value: mintPrice * 2 - 1}(ids);
+    }
+
+    function testBatchMintSpecific() public {
+        uint256[] memory ids = Solarray.uint256s(1, 2);
+        bytes32 salt = bytes32(0);
+        _batchCommitAndWarp(ids, salt);
+        bool[] memory result = test.batchMintSpecific{value: mintPrice * 2}(ids, salt);
+        assertEq(result.length, 2);
+        assertEq(result[0], true);
+        assertEq(result[1], true);
+        assertEq(test.ownerOf(1), address(this));
+        assertEq(test.ownerOf(2), address(this));
+        assertEq(test.numMinted(), 2);
+        assertEq(address(test).balance, mintPrice * 2);
+
+        ids = Solarray.uint256s(2, 3);
+        uint256 beforeBalance = address(this).balance;
+        _batchCommitAndWarp(ids, salt);
+        result = test.batchMintSpecific{value: mintPrice * 2}(ids, salt);
+        assertEq(result.length, 2);
+        assertEq(result[0], false);
+        assertEq(result[1], true);
+        assertEq(test.ownerOf(3), address(this));
+        assertEq(address(this).balance + mintPrice, beforeBalance);
+
+        ids = Solarray.uint256s(4, 4);
+        _batchCommitAndWarp(ids, salt);
+        result = test.batchMintSpecific{value: mintPrice * 2}(ids, salt);
+        assertEq(test.ownerOf(4), address(this));
+        assertEq(test.numMinted(), 4);
+        assertEq(address(this).balance + mintPrice * 2, beforeBalance);
     }
 }

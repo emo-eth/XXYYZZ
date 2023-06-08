@@ -1,44 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {TestPlus} from "solady-test/utils/TestPlus.sol";
-import {Test} from "forge-std/Test.sol";
-// import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {XXYYZZ} from "../src/XXYYZZ.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {CommitReveal} from "../src/lib/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Solarray} from "solarray/Solarray.sol";
 
-contract XXYYZZFinalizeRerollTest is Test, TestPlus {
-    error CannotReceiveEther();
-
-    XXYYZZ test;
-    uint256 mintPrice;
-    uint256 rerollPrice;
-    uint256 rerollSpecificPrice;
-    uint256 finalizePrice;
-    uint256 maxBatchSize;
-    bool allowEther;
-
-    function setUp() public {
-        vm.warp(10_000 days);
-
-        test = new XXYYZZ(address(this),5,false);
-        mintPrice = test.MINT_PRICE();
-        rerollPrice = test.REROLL_PRICE();
-        rerollSpecificPrice = test.REROLL_PRICE();
-        finalizePrice = test.FINALIZE_PRICE();
-        maxBatchSize = test.MAX_BATCH_SIZE();
-        allowEther = true;
-    }
-
-    receive() external payable {
-        if (!allowEther) {
-            revert CannotReceiveEther();
-        }
-    }
-
+contract XXYYZZFinalizeRerollTest is BaseTest {
     function testRerollSpecificUnprotected() public {
         test.mintSpecificUnprotected{value: mintPrice}(1);
         test.rerollSpecificUnprotected{value: rerollSpecificPrice}(1, 2);
@@ -78,6 +48,38 @@ contract XXYYZZFinalizeRerollTest is Test, TestPlus {
         uint256 prevBalance = address(this).balance;
         vm.expectCall(address(this), rerollSpecificPrice, "");
         result = test.batchRerollSpecificUnprotected{value: 2 * rerollSpecificPrice}(ids, newIds);
+        assertEq(result.length, 2);
+        assertEq(result[0], true);
+        assertEq(result[1], false);
+        assertEq(test.ownerOf(6), address(this));
+        assertEq(test.ownerOf(7), address(this));
+        assertEq(address(this).balance, prevBalance - rerollSpecificPrice);
+    }
+
+    function testBatchRerollSpecific() public {
+        uint256[] memory ids = Solarray.uint256s(1, 2, 3);
+        bytes32 salt = bytes32(0);
+        test.batchMintSpecificUnprotected{value: 3 * mintPrice}(ids);
+        assertEq(test.ownerOf(1), address(this));
+        assertEq(test.ownerOf(2), address(this));
+        assertEq(test.ownerOf(3), address(this));
+        uint256[] memory newIds = Solarray.uint256s(4, 5, 6);
+        _batchCommitAndWarp(newIds, salt);
+        bool[] memory result = test.batchRerollSpecific{value: 3 * rerollSpecificPrice}(ids, newIds, salt);
+        assertEq(result.length, 3);
+        assertEq(result[0], true);
+        assertEq(result[1], true);
+        assertEq(result[2], true);
+        assertEq(test.ownerOf(4), address(this));
+        assertEq(test.ownerOf(5), address(this));
+        assertEq(test.ownerOf(6), address(this));
+
+        ids = Solarray.uint256s(4, 5);
+        newIds = Solarray.uint256s(7, 6);
+        uint256 prevBalance = address(this).balance;
+        vm.expectCall(address(this), rerollSpecificPrice, "");
+        _batchCommitAndWarp(newIds, salt);
+        result = test.batchRerollSpecific{value: 2 * rerollSpecificPrice}(ids, newIds, salt);
         assertEq(result.length, 2);
         assertEq(result[0], true);
         assertEq(result[1], false);

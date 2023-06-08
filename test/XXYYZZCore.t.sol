@@ -1,36 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.17;
 
-import {TestPlus} from "solady-test/utils/TestPlus.sol";
-import {Test} from "forge-std/Test.sol";
-// import {XXYYZZCore as XXYYZZ} from "../src/XXYYZZCore.sol";
+import {BaseTest} from "./BaseTest.t.sol";
 import {XXYYZZ} from "../src/XXYYZZ.sol";
 import {XXYYZZCore} from "../src/XXYYZZCore.sol";
 import {CommitReveal} from "../src/lib/CommitReveal.sol";
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {Solarray} from "solarray/Solarray.sol";
 
-contract XXYYZZCoreTest is Test, TestPlus {
-    error CannotReceiveEther();
-
-    XXYYZZ test;
-    uint256 mintPrice;
-    uint256 rerollPrice;
-    uint256 rerollSpecificPrice;
-    uint256 finalizePrice;
-    bool allowEther;
-
-    function setUp() public {
-        vm.warp(10_000 days);
-
-        test = new XXYYZZ(address(this),5,false);
-        mintPrice = test.MINT_PRICE();
-        rerollPrice = test.REROLL_PRICE();
-        rerollSpecificPrice = test.REROLL_PRICE();
-        finalizePrice = test.FINALIZE_PRICE();
-        allowEther = true;
-    }
-
+contract XXYYZZCoreTest is BaseTest {
     function testName() public {
         assertEq(test.name(), "XXYYZZ");
     }
@@ -327,12 +305,6 @@ contract XXYYZZCoreTest is Test, TestPlus {
         test.batchRerollSpecific{value: (rerollSpecificPrice) * 2}(oldIds, new uint256[](0), salt);
     }
 
-    function _batchCommitAndWarp(uint256[] memory ids, bytes32 salt) internal {
-        bytes32 computedCommitment = test.computeBatchCommitment(address(this), ids, salt);
-        test.commit(computedCommitment);
-        vm.warp(block.timestamp + 2 minutes);
-    }
-
     function testBatchRerollSpecificAndFinalizeBatch() public {
         _mintSpecific(0, bytes32(0));
         _mintSpecific(1, bytes32(0));
@@ -483,11 +455,5 @@ contract XXYYZZCoreTest is Test, TestPlus {
         vm.warp(block.timestamp + 2 minutes);
 
         test.rerollSpecific{value: rerollSpecificPrice}(oldId, newId, salt);
-    }
-
-    receive() external payable {
-        if (!allowEther) {
-            revert CannotReceiveEther();
-        }
     }
 }

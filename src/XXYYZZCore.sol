@@ -26,6 +26,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     uint256 public constant MINT_PRICE = 0.01 ether;
     uint256 public constant REROLL_PRICE = 0.005 ether;
     uint256 public constant FINALIZE_PRICE = 0.02 ether;
+    uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.025 ether;
     uint256 public immutable MAX_BATCH_SIZE;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
@@ -318,5 +319,15 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         if (owner != msg.sender) {
             revert OnlyTokenOwner();
         }
+    }
+
+    function _validateBatchAndPayment(uint256[] calldata a, uint256[] calldata b, uint256 unitPrice) internal view {
+        if (a.length != b.length) {
+            revert ArrayLengthMismatch();
+        }
+        if (a.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        _validatePayment(unitPrice, a.length);
     }
 }
