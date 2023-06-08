@@ -215,6 +215,38 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_fromTokenId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_toTokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "BatchMetadataUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "_tokenId",
+        "type": "uint256"
+      }
+    ],
+    "name": "MetadataUpdate",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "pendingOwner",
@@ -349,6 +381,19 @@
   {
     "inputs": [],
     "name": "MINT_PRICE",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "REROLL_AND_FINALIZE_PRICE",
     "outputs": [
       {
         "internalType": "uint256",
@@ -715,7 +760,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "xxyyzz",
+        "name": "id",
         "type": "uint256"
       },
       {
@@ -752,7 +797,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "xxyyzz",
+        "name": "id",
         "type": "uint256"
       }
     ],
@@ -827,7 +872,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "xxyyzz",
+        "name": "id",
         "type": "uint256"
       }
     ],
@@ -1027,7 +1072,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "oldXXYYZZ",
+        "name": "oldId",
         "type": "uint256"
       }
     ],
@@ -1040,12 +1085,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "oldXXYYZZ",
+        "name": "oldId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "newXXYYZZ",
+        "name": "newId",
         "type": "uint256"
       },
       {
@@ -1063,12 +1108,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "oldXXYYZZ",
+        "name": "oldId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "newXXYYZZ",
+        "name": "newId",
         "type": "uint256"
       },
       {
@@ -1086,12 +1131,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "oldXXYYZZ",
+        "name": "oldId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "newXXYYZZ",
+        "name": "newId",
         "type": "uint256"
       }
     ],
@@ -1104,12 +1149,12 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "oldXXYYZZ",
+        "name": "oldId",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "newXXYYZZ",
+        "name": "newId",
         "type": "uint256"
       }
     ],
@@ -1216,7 +1261,7 @@
         "type": "bool"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "pure",
     "type": "function"
   },
   {
