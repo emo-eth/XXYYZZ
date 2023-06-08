@@ -8,9 +8,9 @@ import {XXYYZZCore} from "./XXYYZZCore.sol";
  * @author emo.eth
  * @notice This contract handles "rerolling" and "finalizing" tokens.
  *         Rerolling allows users to burn a token they own in exchange for a new one. The new token may be either
- *         pseudorandom, or a specific color, when using one of the "Specific" methods.
- *         Finalizing allows users
- *
+ *         pseudorandom, or a specific color when using one of the "Specific" methods.
+ *         Finalizing allows users to prevent a token from being rerolled again, in addition to adding their
+ *         wallet address to the token's metadata as the "Finalizer" trait.
  */
 abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     ////////////
@@ -19,32 +19,36 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     /**
      * @notice Burn a token you own and mint a new one with a pseudorandom hex value.
      * @param oldId The 6-hex-digit token ID to burn
+     * @return The new token ID
      */
-    function reroll(uint256 oldId) public payable {
+    function reroll(uint256 oldId) public payable returns (uint256) {
         _validatePayment(REROLL_PRICE, 1);
         // use the caller as the seed to derive the new token ID
         // this means multiple calls in the same block will be gas-inefficient
         // which may somewhat discourage botting
-        _rerollWithSeed(oldId, uint160(msg.sender));
+        return _rerollWithSeed(oldId, uint160(msg.sender));
     }
 
     /**
      * @notice Burn a number of tokens you own and mint new ones with pseudorandom hex values.
-     * @param ids The 6-hex-digit token IDs to burn
+     * @param ids The 6-hex-digit token IDs to burn in exchange for new tokens
+     * @return The new token IDs
      */
-    function batchReroll(uint256[] calldata ids) public payable {
+    function batchReroll(uint256[] calldata ids) public payable returns (uint256[] memory) {
         _validatePayment(REROLL_PRICE, ids.length);
         // use the caller as the seed to derive the new token IDs
         // this means multiple calls in the same block will be gas-inefficient
         // which may somewhat discourage botting
         uint256 seed = uint256(uint160(msg.sender));
+        uint256[] memory newIds = new uint256[](ids.length);
         for (uint256 i; i < ids.length;) {
-            _rerollWithSeed(ids[i], seed);
+            newIds[i] = _rerollWithSeed(ids[i], seed);
             unchecked {
                 ++i;
                 ++seed;
             }
         }
+        return newIds;
     }
 
     /**
@@ -294,12 +298,13 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
      * @param seed The seed to use for the reroll
      *
      */
-    function _rerollWithSeed(uint256 oldId, uint256 seed) internal {
+    function _rerollWithSeed(uint256 oldId, uint256 seed) internal returns (uint256) {
         _checkCallerIsOwnerAndNotFinalized(oldId);
         // burn old token
         _burn(oldId);
         uint256 tokenId = _findAvailableHex(seed);
         _mint(msg.sender, tokenId);
+        return tokenId;
     }
 
     /**
@@ -347,7 +352,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     /**
-     * @dev Finalize a token, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
+     * @dev Finalize a tokenId, updating its metadata with a "Finalizer" trait, and preventing it from being rerolled in the future.
      * @param id The 6-hex-digit token ID to finalize
      * @param finalizer The address of the account finalizing the token
      */

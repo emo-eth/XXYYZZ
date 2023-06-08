@@ -37,30 +37,36 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
     /**
      * @notice Mint a token with a pseudorandom hex value.
+     * @return The token ID
      */
-    function mint() public payable {
+    function mint() public payable returns (uint256) {
         uint256 newAmount = _checkMintAndIncrementNumMinted(1);
         // get pseudorandom hex id – doesn't need to be derived from caller
         uint256 tokenId = _findAvailableHex(newAmount);
         _mint(msg.sender, tokenId);
+        return tokenId;
     }
 
     /**
      * @notice Mint a number of tokens with pseudorandom hex values.
      * @param quantity The number of tokens to mint
+     * @return The token IDs
      */
-    function mint(uint256 quantity) public payable {
+    function mint(uint256 quantity) public payable returns (uint256[] memory) {
         // check payment and quantity once
         uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
+        uint256[] memory tokenIds = new uint256[](quantity);
         for (uint256 i; i < quantity;) {
             // get pseudorandom hex id
             uint256 tokenId = _findAvailableHex(newAmount);
             _mint(msg.sender, tokenId);
+            tokenIds[i] = tokenId;
             unchecked {
                 ++i;
                 ++newAmount;
             }
         }
+        return tokenIds;
     }
 
     /**
@@ -167,7 +173,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
         // increment supply before minting
         uint32 newAmount;
-        // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
+        // this can be unchecked because an ID can only be minted once, and all IDs are later validated to be uint24s
         unchecked {
             newAmount = _numMinted + uint32(quantityRequested);
         }
@@ -182,6 +188,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
     function _incrementNumMintedAndRefundOverpayment(uint256 numMinted) internal returns (uint256) {
         uint256 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
+        // overflow here implies invalid IDs down the line, which will cause a revert when minting
         unchecked {
             newAmount = _numMinted + numMinted;
         }
