@@ -90,20 +90,6 @@ abstract contract XXYYZZMint is XXYYZZCore {
     }
 
     /**
-     * @notice Mint a token with a specific hex id. Does not use a commit-reveal scheme, so it is vulnerable
-     *         to front-running. Users calling this function should use an RPC with a private mempool
-     *         (such as Flashbots) to prevent front-running.
-     * @param id The 6-hex-digit token ID to mint
-     */
-    function mintSpecificUnprotected(uint256 id) public payable {
-        _checkMintAndIncrementNumMinted(1);
-        // validate that the token doesn't already exist or has been finalized
-        if (!_mintSpecificUnprotected(id)) {
-            revert Unavailable();
-        }
-    }
-
-    /**
      * @notice Mint a number of tokens with specific hex values.
      *         A user must first call commit(bytes32) with the result of
      *         `computeBatchCommitment(address,uint256[],bytes32)`, and wait at least COMMITMENT_LIFESPAN seconds.
@@ -115,18 +101,6 @@ abstract contract XXYYZZMint is XXYYZZCore {
         _validateBatchMintAndTimestamp(ids);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
         _assertCommittedReveal(computedCommitment);
-        return _batchMintAndIncrementAndRefund(ids);
-    }
-
-    /**
-     * @notice Mint a number of tokens with specific hex values. Does not use a commit-reveal scheme, so it is
-     *         vulnerable to front-running. Users calling this function should use an RPC with a private mempool
-     *         (such as Flashbots) to prevent front-running.
-     * @param ids The 6-hex-digit token IDs to mint
-     * @return An array of booleans indicating whether each token was minted
-     */
-    function batchMintSpecificUnprotected(uint256[] calldata ids) public payable returns (bool[] memory) {
-        _validateBatchMintAndTimestamp(ids);
         return _batchMintAndIncrementAndRefund(ids);
     }
 

@@ -48,4 +48,22 @@ contract BaseTest is Test, TestPlus {
     function _timestamp() external view returns (uint256) {
         return block.timestamp;
     }
+
+    function _mintSpecific(uint256[] memory ids, bytes32 salt) internal {
+        bytes32 computedCommitment = test.computeBatchCommitment(address(this), ids, salt);
+        test.commit(computedCommitment);
+
+        vm.warp(this._timestamp() + 2 minutes);
+
+        test.batchMintSpecific{value: ids.length * mintPrice}(ids, salt);
+    }
+
+    function _mintSpecific(uint256 id, bytes32 salt) internal {
+        bytes32 commitmentHash = test.computeCommitment(address(this), uint24(id), salt);
+        test.commit(commitmentHash);
+
+        vm.warp(this._timestamp() + 2 minutes);
+
+        test.mintSpecific{value: mintPrice}(id, salt);
+    }
 }
