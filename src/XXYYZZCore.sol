@@ -5,8 +5,9 @@ import {ERC721} from "solady/tokens/ERC721.sol";
 import {CommitReveal} from "./lib/CommitReveal.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IERC4906, IERC165} from "./interfaces/IERC4906.sol";
 
-abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
+abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     error InvalidPayment();
     error InvalidHex();
     error MaximumSupplyExceeded();
@@ -124,10 +125,21 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     /**
      * @notice Check if a specific token ID has been finalized. Will return true for tokens that were finalized and
      *         then burned. Will not revert if the tokenID does not currently exist. Will revert on invalid tokenIds.
+     * @param id The token ID to check
+     * @return True if the token ID has been finalized, false otherwise
      */
-    function isFinalized(uint256 xxyyzz) public view returns (bool) {
-        _validateId(xxyyzz);
-        return _isFinalized(xxyyzz);
+    function isFinalized(uint256 id) public view returns (bool) {
+        _validateId(id);
+        return _isFinalized(id);
+    }
+
+    ///@inheritdoc IERC165
+    function supportsInterface(bytes4 interfaceId) public pure override(ERC721, IERC165) returns (bool result) {
+        assembly ("memory-safe") {
+            let s := shr(224, interfaceId)
+            // ERC165: 0x01ffc9a7, ERC721: 0x80ac58cd, ERC721Metadata: 0x5b5e139f. ERC4906: 0x49064906
+            result := or(or(or(eq(s, 0x01ffc9a7), eq(s, 0x80ac58cd)), eq(s, 0x5b5e139f)), eq(s, 0x49064906))
+        }
     }
 
     /////////////////
@@ -138,17 +150,17 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      * @notice Get a commitment hash for a given sender, tokenId, and salt. Note that this could expose your desired
      *         ID to the RPC provider. Won't revert if the ID is invalid, but will return an invalid hash.
      * @param sender The address of the account that will mint or reroll the token ID
-     * @param xxyyzz The 6-hex-digit token ID to mint or reroll
+     * @param id The 6-hex-digit token ID to mint or reroll
      * @param salt The salt to use for the commitment
      */
-    function computeCommitment(address sender, uint256 xxyyzz, bytes32 salt)
+    function computeCommitment(address sender, uint256 id, bytes32 salt)
         public
         pure
         returns (bytes32 committmentHash)
     {
         assembly {
             // shift sender to top 160 bits; id stays in bottom 24
-            mstore(0, or(shl(96, sender), and(xxyyzz, MAX_UINT24)))
+            mstore(0, or(shl(96, sender), and(id, MAX_UINT24)))
             mstore(0x20, salt)
             committmentHash := keccak256(0, 0x40)
         }
@@ -199,36 +211,48 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
     // HELPERS //
     /////////////
 
-    ///@dev Mint a token with a specific hex value and validate it was committed to
-    function _mintSpecific(uint256 xxyyzz, bytes32 salt) internal {
-        _mintSpecificWithCommitment(xxyyzz, computeCommitment(msg.sender, xxyyzz, salt));
+    /**
+     * @dev Mint a token with a specific hex value and validate it was committed to
+     * @param id The 6-hex-digit token ID to mint
+     * @param salt The salt to use for the commitment
+     */
+    function _mintSpecific(uint256 id, bytes32 salt) internal {
+        _mintSpecificWithCommitment(id, computeCommitment(msg.sender, id, salt));
     }
 
-    ///@dev Mint a token with a specific hex value and validate it was committed to
-    function _mintSpecificWithCommitment(uint256 xxyyzz, bytes32 computedCommitment) internal {
+    /**
+     * @dev Mint a token with a specific hex value and validate it was committed to
+     * @param id The 6-hex-digit token ID to mint
+     * @param computedCommitment The commitment hash to validate
+     */
+    function _mintSpecificWithCommitment(uint256 id, bytes32 computedCommitment) internal {
         // validate ID is valid 6-hex-digit number
-        _validateId(xxyyzz);
+        _validateId(id);
         // validate commitment to prevent front-running
         _assertCommittedReveal(computedCommitment);
 
         // don't allow minting of tokens that were finalized and then burned
-        if (_isFinalized(xxyyzz)) {
+        if (_isFinalized(id)) {
             revert AlreadyFinalized();
         }
-        _mint(msg.sender, xxyyzz);
+        _mint(msg.sender, id);
     }
 
-    ///@dev Mint a token with a specific hex value without validating it was committed to
-    function _mintSpecificUnprotected(uint256 xxyyzz) internal returns (bool) {
+    /**
+     * @dev Mint a token with a specific hex value without validating it was committed to
+     * @param id The 6-hex-digit token ID to mint
+     * @return True if the token was minted, false otherwise
+     */
+    function _mintSpecificUnprotected(uint256 id) internal returns (bool) {
         // validate ID is valid 6-hex-digit number
-        _validateId(xxyyzz);
+        _validateId(id);
         // don't allow minting of tokens that exist or were finalized and then burned
-        if (_packedOwnershipSlot(xxyyzz) != 0) {
+        if (_packedOwnershipSlot(id) != 0) {
             // return false indicating a no-op
             return false;
         }
         // otherwise mint the token
-        _mint(msg.sender, xxyyzz);
+        _mint(msg.sender, id);
         return true;
     }
 
@@ -276,7 +300,11 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
-    ///@dev Refund any overpayment
+    /**
+     * @dev Refund any overpayment
+     * @param unitPrice The price per action (mint, reroll, reroll+finalize)
+     * @param availableQuantity The number of tokens (mints, rerolls) that were actually available for purchase
+     */
     function _refundOverpayment(uint256 unitPrice, uint256 availableQuantity) internal {
         unchecked {
             // can't underflow because payment was already validated; even if it did, value would be larger than ether
@@ -288,9 +316,12 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
-    ///@dev Check if a specific token has been finalized. Does not check if token exists.
-    function _isFinalized(uint256 xxyyzz) internal view returns (bool) {
-        return _getExtraData(xxyyzz) == FINALIZED;
+    /**
+     * @dev Check if a specific token has been finalized. Does not check if token exists.
+     * @param id The 6-hex-digit token ID to check
+     */
+    function _isFinalized(uint256 id) internal view returns (bool) {
+        return _getExtraData(id) == FINALIZED;
     }
 
     /**
@@ -298,6 +329,7 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
      *      (finalization status). This allows for succint checking of whether or not a token is mintable,
      *      i.e., whether it does not currently exist and has not been finalized. It also allows for avoiding
      *      an extra SLOAD in cases when checking both owner/existence and finalization status.
+     * @param id The 6-hex-digit token ID to check
      */
     function _packedOwnershipSlot(uint256 id) internal view returns (uint256 result) {
         assembly ("memory-safe") {
@@ -321,6 +353,12 @@ abstract contract XXYYZZCore is ERC721, CommitReveal, Ownable {
         }
     }
 
+    /**
+     * @dev Check that array lengths match, the batch size is not too large, and that the payment is correct
+     * @param a The first array to check
+     * @param b The second array to check
+     * @param unitPrice The price per action (mint, reroll, reroll+finalize)
+     */
     function _validateBatchAndPayment(uint256[] calldata a, uint256[] calldata b, uint256 unitPrice) internal view {
         if (a.length != b.length) {
             revert ArrayLengthMismatch();

@@ -332,16 +332,18 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         }
         return false;
     }
+
     /**
      * @dev Internal function to finalize a token, first checking that the caller is the owner and that the token
      *      has not already been finalized.
      * @param id The 6-hex-digit token ID to finalize
      */
-
     function _finalize(uint256 id) internal {
         _checkCallerIsOwnerAndNotFinalized(id);
         // set finalized flag
         _finalizeToken(id, msg.sender);
+        // emit onchain metadata update event
+        emit MetadataUpdate(id);
     }
 
     /**

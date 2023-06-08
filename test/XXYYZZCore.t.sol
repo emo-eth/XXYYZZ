@@ -456,4 +456,11 @@ contract XXYYZZCoreTest is BaseTest {
 
         test.rerollSpecific{value: rerollSpecificPrice}(oldId, newId, salt);
     }
+
+    function testSupportsInterface() public {
+        assertTrue(test.supportsInterface(0x01ffc9a7));
+        assertTrue(test.supportsInterface(0x80ac58cd));
+        assertTrue(test.supportsInterface(0x5b5e139f));
+        assertTrue(test.supportsInterface(0x49064906));
+    }
 }
