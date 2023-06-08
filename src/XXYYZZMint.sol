@@ -3,6 +3,15 @@ pragma solidity ^0.8.17;
 
 import {XXYYZZCore} from "./XXYYZZCore.sol";
 
+/**
+ * @title XXYYZZMint
+ * @author emo.eth
+ * @notice This contract handles minting of XXYYZZ tokens.
+ *         Tokens may be minted with a pseudorandom hex value, or with a specific hex value.
+ *         The "Specific" methods allow for minting tokens with specific hex values with a commit-reveal scheme.
+ *         Users may protect themselves against front-running by
+ *         The "Unprotected" methods allow for minting tokens with specific hex values without a commit-reveal.
+ */
 abstract contract XXYYZZMint is XXYYZZCore {
     uint256 public immutable MAX_MINT_CLOSE_TIMESTAMP;
 
@@ -13,6 +22,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
     /**
      * @notice Set the mint close timestamp. Close can only set to be earlier than MAX_MINT_CLOSE_TIMESTAMP. onlyOwner.
+     * @param timestamp The new timestamp
      */
     function setMintCloseTimestamp(uint256 timestamp) external onlyOwner {
         if (timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
@@ -64,51 +74,64 @@ abstract contract XXYYZZMint is XXYYZZCore {
      *             2. Call `commit(result)`
      *             3. Wait at least 1 minute, but less than 1 day
      *             4. Call `mintSpecific(0x123456, bytes32(0xDEADBEEF))`
-     * @param xxyyzz The 6-hex-digit token ID to mint
+     * @param id The 6-hex-digit token ID to mint
      * @param salt The salt used in the commitment for the commitment
      */
-    function mintSpecific(uint256 xxyyzz, bytes32 salt) public payable {
+    function mintSpecific(uint256 id, bytes32 salt) public payable {
         _checkMintAndIncrementNumMinted(1);
-        _mintSpecific(xxyyzz, salt);
+        _mintSpecific(id, salt);
     }
 
-    function mintSpecificUnprotected(uint256 xxyyzz) public payable {
+    /**
+     * @notice Mint a token with a specific hex id. Does not use a commit-reveal scheme, so it is vulnerable
+     *         to front-running. Users calling this function should use an RPC with a private mempool
+     *         (such as Flashbots) to prevent front-running.
+     * @param id The 6-hex-digit token ID to mint
+     */
+    function mintSpecificUnprotected(uint256 id) public payable {
+        _checkMintAndIncrementNumMinted(1);
         // validate that the token doesn't already exist or has been finalized
-        if (!_mintSpecificUnprotected(xxyyzz)) {
+        if (!_mintSpecificUnprotected(id)) {
             revert Unavailable();
         }
-        // technically violates checks/effects/interactions pattern – but safeMint is not used,
-        // so there is no chance of reentrancy
-        _checkMintAndIncrementNumMinted(1);
     }
 
     /**
      * @notice Mint a number of tokens with specific hex values.
-     *         A user must first call commit(bytes32) with the result of computeBatchCommitment(address,uint256[],bytes32), and wait at least one minute.
+     *         A user must first call commit(bytes32) with the result of
+     *         `computeBatchCommitment(address,uint256[],bytes32)`, and wait at least COMMITMENT_LIFESPAN seconds.
      * @param ids The 6-hex-digit token IDs to mint
      * @param salt The salt used in the batch commitment
+     * @return An array of booleans indicating whether each token was minted
      */
     function batchMintSpecific(uint256[] calldata ids, bytes32 salt) public payable returns (bool[] memory) {
-        if (ids.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        _validateTimestamp();
-        _validatePayment(MINT_PRICE, ids.length);
+        _validateBatchMintAndTimestamp(ids);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, ids, salt);
         _assertCommittedReveal(computedCommitment);
         return _batchMintAndIncrementAndRefund(ids);
     }
 
+    /**
+     * @notice Mint a number of tokens with specific hex values. Does not use a commit-reveal scheme, so it is
+     *         vulnerable to front-running. Users calling this function should use an RPC with a private mempool
+     *         (such as Flashbots) to prevent front-running.
+     * @param ids The 6-hex-digit token IDs to mint
+     * @return An array of booleans indicating whether each token was minted
+     */
     function batchMintSpecificUnprotected(uint256[] calldata ids) public payable returns (bool[] memory) {
-        if (ids.length > MAX_BATCH_SIZE) {
-            revert MaxBatchSizeExceeded();
-        }
-        _validateTimestamp();
-        _validatePayment(MINT_PRICE, ids.length);
-
+        _validateBatchMintAndTimestamp(ids);
         return _batchMintAndIncrementAndRefund(ids);
     }
 
+    /////////////
+    // HELPERS //
+    /////////////
+
+    /**
+     * @dev Mint tokens, validate that tokens were minted, increment the number of minted tokens, and refund any
+     *      overpayment
+     * @param ids The 6-hex-digit token IDs to mint
+     */
     function _batchMintAndIncrementAndRefund(uint256[] calldata ids) internal returns (bool[] memory) {
         bool[] memory minted = new bool[](ids.length);
         uint256 quantityMinted;
@@ -142,15 +165,19 @@ abstract contract XXYYZZMint is XXYYZZCore {
         _validatePayment(MINT_PRICE, quantityRequested);
 
         // increment supply before minting
-        uint256 newAmount;
+        uint64 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
         unchecked {
             newAmount = _numMinted + uint64(quantityRequested);
         }
-        _numMinted = uint64(newAmount);
+        _numMinted = newAmount;
         return newAmount;
     }
 
+    /**
+     * @dev Increment the number of minted tokens and refund any overpayment
+     * @param numMinted The number of tokens actually minted
+     */
     function _incrementNumMintedAndRefundOverpayment(uint256 numMinted) internal returns (uint256) {
         uint256 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
@@ -162,6 +189,18 @@ abstract contract XXYYZZMint is XXYYZZCore {
         return newAmount;
     }
 
+    /**
+     * @dev Validate the timestamp and payment for a batch mint
+     * @param ids The 6-hex-digit token IDs to mint
+     */
+    function _validateBatchMintAndTimestamp(uint256[] calldata ids) internal view {
+        _validateTimestamp();
+        _validateBatchAndPayment(ids, MINT_PRICE);
+    }
+
+    /**
+     * @dev Validate the timestamp of a mint
+     */
     function _validateTimestamp() internal view {
         if (block.timestamp > mintCloseTimestamp) {
             revert MintClosed();

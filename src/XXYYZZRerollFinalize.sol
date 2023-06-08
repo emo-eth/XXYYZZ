@@ -90,7 +90,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         payable
         returns (bool[] memory)
     {
-        _validateBatchAndPayment(oldIds, newIds, REROLL_PRICE);
+        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_PRICE);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         _assertCommittedReveal(computedCommitment);
 
@@ -110,7 +110,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         payable
         returns (bool[] memory)
     {
-        _validateBatchAndPayment(oldIds, newIds, REROLL_PRICE);
+        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_PRICE);
         return _batchRerollAndRefund(oldIds, newIds);
     }
 
@@ -159,7 +159,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         payable
         returns (bool[] memory)
     {
-        _validateBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
+        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         _assertCommittedReveal(computedCommitment);
         return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
@@ -179,7 +179,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         payable
         returns (bool[] memory)
     {
-        _validateBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
+        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
 
         return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
     }

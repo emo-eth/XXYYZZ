@@ -7,6 +7,11 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IERC4906, IERC165} from "./interfaces/IERC4906.sol";
 
+/**
+ * @title XXYYZZCore
+ * @author emo.eth
+ * @notice Core contract for XXYYZZ NFTs. Contains errors, constants, core token information, and helper functions.
+ */
 abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     error InvalidPayment();
     error InvalidHex();
@@ -359,13 +364,20 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
      * @param b The second array to check
      * @param unitPrice The price per action (mint, reroll, reroll+finalize)
      */
-    function _validateBatchAndPayment(uint256[] calldata a, uint256[] calldata b, uint256 unitPrice) internal view {
+    function _validateRerollBatchAndPayment(uint256[] calldata a, uint256[] calldata b, uint256 unitPrice)
+        internal
+        view
+    {
         if (a.length != b.length) {
             revert ArrayLengthMismatch();
         }
-        if (a.length > MAX_BATCH_SIZE) {
+        _validateBatchAndPayment(a, unitPrice);
+    }
+
+    function _validateBatchAndPayment(uint256[] calldata ids, uint256 unitPrice) internal view {
+        if (ids.length > MAX_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
-        _validatePayment(unitPrice, a.length);
+        _validatePayment(ids.length, unitPrice);
     }
 }

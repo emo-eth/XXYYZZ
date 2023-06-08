@@ -123,4 +123,40 @@ contract XXYYZZMintTest is BaseTest {
         assertEq(test.numMinted(), 4);
         assertEq(address(this).balance + mintPrice * 2, beforeBalance);
     }
+
+    function testMint_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.mint();
+    }
+
+    function testMintMany_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.mint(1);
+    }
+
+    function testMintSpecific_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.mintSpecific(1, bytes32(0));
+    }
+
+    function testMintSpecificUnprotected_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.mintSpecificUnprotected{value: mintPrice}(1);
+    }
+
+    function testBatchMintSpecific_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.batchMintSpecific(new uint256[](1), bytes32(0));
+    }
+
+    function testBatchMintSpecificUnprotected_MintClosed() public {
+        vm.warp(20_000 days);
+        vm.expectRevert(XXYYZZCore.MintClosed.selector);
+        test.batchMintSpecificUnprotected{value: mintPrice}(new uint256[](1));
+    }
 }

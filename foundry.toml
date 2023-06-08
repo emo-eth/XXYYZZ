@@ -13,7 +13,6 @@ bytecode_hash = 'none'
 cbor_metadata = false
 optimizer_runs = 1_000_000
 evm_version = 'shanghai'
-# via_ir = true
 
 [rpc_endpoints]
 polygon_mumbai = "${MUMBAI_RPC_URL}"
