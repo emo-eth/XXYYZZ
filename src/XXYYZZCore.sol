@@ -29,23 +29,24 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     error NoneAvailable();
     error MaxBatchSizeExceeded();
 
-    uint256 public constant MINT_PRICE = 0.01 ether;
-    uint256 public constant REROLL_PRICE = 0.005 ether;
-    uint256 public constant FINALIZE_PRICE = 0.02 ether;
-    uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.025 ether;
+    uint256 public constant MINT_PRICE = 0.00499 ether;
+    uint256 public constant REROLL_PRICE = 0.00025 ether;
+    uint256 public constant FINALIZE_PRICE = 0.00499 ether;
+    uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.00524 ether;
     uint256 public immutable MAX_BATCH_SIZE;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
     uint96 constant FINALIZED = 1;
     uint96 constant NOT_FINALIZED = 0;
+
     // re-declared from solady ERC721 for custom gas optimizations
     uint256 private constant _ERC721_MASTER_SLOT_SEED = 0x7d8825530a5a2e7a << 192;
 
     mapping(uint256 tokenId => address finalizer) public finalizers;
-    uint64 _numMinted;
-    uint64 _numBurned;
-    uint64 public mintCloseTimestamp;
+    uint32 public mintCloseTimestamp;
+    uint32 _numBurned;
+    uint32 _numMinted;
 
     constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 1 minutes) {
         _initializeOwner(initialOwner);

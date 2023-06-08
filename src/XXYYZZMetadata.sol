@@ -5,6 +5,11 @@ import {XXYYZZCore} from "./XXYYZZCore.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {Base64} from "solady/utils/Base64.sol";
 
+/**
+ * @title XXYYZZMetadata
+ * @author emo.eth
+ * @notice XXYYZZMetadata implements the onchain metadata for XXYYZZ tokens.
+ */
 abstract contract XXYYZZMetadata is XXYYZZCore {
     using LibString for uint256;
     using LibString for address;
@@ -26,9 +31,12 @@ abstract contract XXYYZZMetadata is XXYYZZCore {
             "{",
             _kv("name", _name(id)),
             ",",
-            _kv("external_link", "https://mycoolsite.com"),
+            _kv("external_link", "https://xxyyzz.io"),
             ",",
-            _kv("description", "Proof of stuff."),
+            _kv(
+                "description",
+                "Proof of color. XXYYZZ is a collection of fully onchain, unique, composable, and collectable colors."
+            ),
             ",",
             _kv("image", _imageURI(id)),
             ",",
@@ -37,11 +45,10 @@ abstract contract XXYYZZMetadata is XXYYZZCore {
         );
     }
 
-    /**
-     * @dev Return a contract-level JSON string
-     */
+    ///@dev Return a contract-level JSON string
     function _stringContractURI() internal pure returns (string memory) {
-        return '{"name":"abc123","description":"my cool description","external_link":"https://mycoolsite.com"}';
+        return
+        '{"name":"XXYYZZ","description":"Collectible, composable, and unique onchain colors.","external_link":"https://xxyyzz.io}';
     }
 
     ///@dev Return a name like "#aabbcc"

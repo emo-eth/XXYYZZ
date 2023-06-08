@@ -16,8 +16,8 @@ abstract contract XXYYZZMint is XXYYZZCore {
     uint256 public immutable MAX_MINT_CLOSE_TIMESTAMP;
 
     constructor(address initialOwner, uint256 maxBatchSize) XXYYZZCore(initialOwner, maxBatchSize) {
-        MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 10 days;
-        mintCloseTimestamp = uint64(MAX_MINT_CLOSE_TIMESTAMP);
+        MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 30 days;
+        mintCloseTimestamp = uint32(MAX_MINT_CLOSE_TIMESTAMP);
     }
 
     /**
@@ -28,7 +28,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
         if (timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
             revert InvalidTimestamp();
         }
-        mintCloseTimestamp = uint64(timestamp);
+        mintCloseTimestamp = uint32(timestamp);
     }
 
     //////////
@@ -58,6 +58,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
             _mint(msg.sender, tokenId);
             unchecked {
                 ++i;
+                ++newAmount;
             }
         }
     }
@@ -165,10 +166,10 @@ abstract contract XXYYZZMint is XXYYZZCore {
         _validatePayment(MINT_PRICE, quantityRequested);
 
         // increment supply before minting
-        uint64 newAmount;
+        uint32 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
         unchecked {
-            newAmount = _numMinted + uint64(quantityRequested);
+            newAmount = _numMinted + uint32(quantityRequested);
         }
         _numMinted = newAmount;
         return newAmount;
@@ -184,7 +185,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
         unchecked {
             newAmount = _numMinted + numMinted;
         }
-        _numMinted = uint64(newAmount);
+        _numMinted = uint32(newAmount);
         _refundOverpayment(MINT_PRICE, numMinted);
         return newAmount;
     }
