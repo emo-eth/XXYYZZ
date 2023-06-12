@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.20;
 
 import {XXYYZZCore} from "./XXYYZZCore.sol";
 
@@ -183,17 +183,17 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
     /**
      * @dev Increment the number of minted tokens and refund any overpayment
-     * @param numMinted The number of tokens actually minted
+     * @param numMinted_ The number of tokens actually minted
      */
-    function _incrementNumMintedAndRefundOverpayment(uint256 numMinted) internal returns (uint256) {
+    function _incrementNumMintedAndRefundOverpayment(uint256 numMinted_) internal returns (uint256) {
         uint256 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
         // overflow here implies invalid IDs down the line, which will cause a revert when minting
         unchecked {
-            newAmount = _numMinted + numMinted;
+            newAmount = _numMinted + numMinted_;
         }
         _numMinted = uint32(newAmount);
-        _refundOverpayment(MINT_PRICE, numMinted);
+        _refundOverpayment(MINT_PRICE, numMinted_);
         return newAmount;
     }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.20;
 
 import {XXYYZZMetadata} from "./XXYYZZMetadata.sol";
 import {XXYYZZBurn} from "./XXYYZZBurn.sol";
@@ -36,17 +36,15 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZMint, XXYYZZRerollFinalize 
         XXYYZZMint(initialOwner, maxBatchSize)
     {
         if (constructorMint) {
-            _mint(initialOwner, 0x000000);
-            _mint(initialOwner, 0x00DEAD);
-            _mint(initialOwner, 0xFF6000);
-            _mint(initialOwner, 0x000069);
-            _mint(initialOwner, 0x00FF00);
-            _finalizeToken(0x000000, initialOwner);
-            _finalizeToken(0x00DEAD, initialOwner);
-            _finalizeToken(0xFF6000, initialOwner);
-            _finalizeToken(0x000069, initialOwner);
-            _finalizeToken(0x00FF00, initialOwner);
-            _numMinted = 5;
+            uint24[6] memory specificIds = [0x000000, 0x00DEAD, 0xFF6000, 0x000069, 0x00FF00, 0xFFFFFF];
+            for (uint256 i; i < specificIds.length;) {
+                _mint(initialOwner, specificIds[i]);
+                _finalizeToken(specificIds[i], initialOwner);
+                unchecked {
+                    ++i;
+                }
+            }
+            _numMinted = uint32(specificIds.length);
         }
     }
 }

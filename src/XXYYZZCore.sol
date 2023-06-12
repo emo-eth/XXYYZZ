@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity 0.8.20;
 
 import {ERC721} from "solady/tokens/ERC721.sol";
 import {CommitReveal} from "./lib/CommitReveal.sol";
@@ -48,7 +48,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     uint32 _numBurned;
     uint32 _numMinted;
 
-    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 1 minutes) {
+    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 48 seconds) {
         _initializeOwner(initialOwner);
         MAX_BATCH_SIZE = maxBatchSize;
     }
