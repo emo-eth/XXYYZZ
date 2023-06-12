@@ -23,7 +23,7 @@ import {Base64} from "solady/utils/Base64.sol";
  *         To prevent front-running "specific" mint transactions, the XXYYZZ contract uses a commit-reveal scheme.
  *         Users must commit a hash of their desired hex value with a secret salt, wait at least one minute, and then
  *         submit their mint or reroll transaction with the original hex value(s) and salt.
- *         Multiple IDs may be minted or rerolled in a single transaction by committing the result of hash of all IDs in order
+ *         Multiple IDs may be minted or rerolled in a single transaction by committixng the result of hash of all IDs in order
  *         with a single secret salt.
  *         In batch methods, unavailable IDs are skipped, and excess payment is refunded to the caller.
  */

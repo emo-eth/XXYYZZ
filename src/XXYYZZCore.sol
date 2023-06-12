@@ -48,7 +48,15 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     uint32 _numBurned;
     uint32 _numMinted;
 
-    constructor(address initialOwner, uint256 maxBatchSize) CommitReveal(1 days, 48 seconds) {
+    constructor(address initialOwner, uint256 maxBatchSize)
+        // lifespan
+        CommitReveal(
+            1 days,
+            // delay – MM/RPC will revert failure until first eligible block is validated,
+            // so 48 seconds will result in 60 seconds of delay for the frontend
+            48 seconds
+        )
+    {
         _initializeOwner(initialOwner);
         MAX_BATCH_SIZE = maxBatchSize;
     }

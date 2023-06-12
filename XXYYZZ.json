@@ -537,7 +537,13 @@
       }
     ],
     "name": "batchReroll",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -890,7 +896,13 @@
   {
     "inputs": [],
     "name": "mint",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -903,7 +915,13 @@
       }
     ],
     "name": "mint",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256[]",
+        "name": "",
+        "type": "uint256[]"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
@@ -912,9 +930,9 @@
     "name": "mintCloseTimestamp",
     "outputs": [
       {
-        "internalType": "uint64",
+        "internalType": "uint32",
         "name": "",
-        "type": "uint64"
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -924,7 +942,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "xxyyzz",
+        "name": "id",
         "type": "uint256"
       },
       {
@@ -942,7 +960,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "xxyyzz",
+        "name": "id",
         "type": "uint256"
       }
     ],
@@ -1077,7 +1095,13 @@
       }
     ],
     "name": "reroll",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
