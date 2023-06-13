@@ -41,6 +41,7 @@ contract XXYYZZBurnTest is Test, TestPlus {
         test.burn(0, true);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
+        assertTrue(test.isFinalized(0));
     }
 
     function testBatchBurn_onlyFinalized() public {
@@ -59,6 +60,9 @@ contract XXYYZZBurnTest is Test, TestPlus {
         test.ownerOf(0);
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(1);
+
+        assertTrue(test.isFinalized(0));
+        assertTrue(test.isFinalized(1));
 
         // now finalize the second one but not the first
         _mintSpecific(2, bytes32(0));

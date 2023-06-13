@@ -27,11 +27,6 @@ contract XXYYZZCoreTest is BaseTest {
         );
     }
 
-    function testMintMany() public {
-        test.mint{value: mintPrice * 3}(3);
-        assertEq(test.balanceOf(address(this)), 3);
-    }
-
     function testMint() public {
         test.mint{value: mintPrice}();
         assertEq(test.balanceOf(address(this)), 1);
@@ -336,7 +331,10 @@ contract XXYYZZCoreTest is BaseTest {
         _mintSpecific(1, bytes32(0));
         uint256[] memory ids = new uint256[](2);
         ids[1] = 1;
-        test.batchReroll{value: rerollPrice * 2}(ids);
+        uint256[] memory newIds = test.batchReroll{value: rerollPrice * 2}(ids);
+
+        // assert ids are not sequential
+        assertTrue(newIds[0] != (newIds[1] - 1));
     }
 
     function _mintSpecific(uint256 id, bytes32 salt) internal {

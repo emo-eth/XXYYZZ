@@ -136,6 +136,15 @@ contract XXYYZZMintTest is BaseTest {
         test.mint(1);
     }
 
+    function testMintMany() public {
+        test.mint{value: mintPrice * 3}(3);
+        assertEq(test.balanceOf(address(this)), 3);
+        assertEq(test.ownerOf(10239363), address(this));
+        // validate IDs are not sequential
+        vm.expectRevert(ERC721.TokenDoesNotExist.selector);
+        test.ownerOf(10239364);
+    }
+
     function testMintSpecific_MintClosed() public {
         vm.warp(20_000 days);
         vm.expectRevert(XXYYZZCore.MintClosed.selector);

@@ -15,8 +15,12 @@ abstract contract XXYYZZMetadata is XXYYZZCore {
     using LibString for address;
     using Base64 for bytes;
 
-    ///@notice Return the base64-encoded token metadata
+    /**
+     * @notice Return the base64-encoded token metadata. Won't revert if the token doesn't exist.
+     *         Will revert if the id is not a valid six-hex-digit ID.
+     */
     function tokenURI(uint256 id) public view virtual override returns (string memory) {
+        _validateId(id);
         return string.concat("data:application/json;base64,", bytes(_stringURI(id)).encode());
     }
 

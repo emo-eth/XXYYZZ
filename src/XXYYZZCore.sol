@@ -29,10 +29,10 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     error NoneAvailable();
     error MaxBatchSizeExceeded();
 
-    uint256 public constant MINT_PRICE = 0.00499 ether;
+    uint256 public constant MINT_PRICE = 0.005 ether;
     uint256 public constant REROLL_PRICE = 0.00025 ether;
-    uint256 public constant FINALIZE_PRICE = 0.00499 ether;
-    uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.00524 ether;
+    uint256 public constant FINALIZE_PRICE = 0.005 ether;
+    uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.00525 ether;
     uint256 public immutable MAX_BATCH_SIZE;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
@@ -52,8 +52,9 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         // lifespan
         CommitReveal(
             1 days,
-            // delay – MM/RPC will revert failure until first eligible block is validated,
-            // so 48 seconds will result in 60 seconds of delay for the frontend
+            // delay – MM/RPC will report a tx will revert until first eligible block is validated,
+            // so 48 seconds will result in 60 seconds of delay before the frontend will report
+            // that a tx will succeed
             48 seconds
         )
     {
