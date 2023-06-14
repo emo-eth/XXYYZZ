@@ -66,20 +66,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     /**
-     * @notice Burn and re-mint a token with a specific hex ID. Does not use a commit-reveal scheme, so it is vulnerable
-     *         to front-running. Only callable by the owner of the token. Users calling this function should use an RPC
-     *         with a private mempool (such as Flashbots) to prevent front-running.
-     * @param oldId The 6-hex-digit token ID to burn
-     * @param newId The 6-hex-digit token ID to mint
-     */
-    function rerollSpecificUnprotected(uint256 oldId, uint256 newId) public payable {
-        _validatePayment(REROLL_PRICE, 1);
-        if (!_rerollSpecificUnprotected(oldId, newId)) {
-            revert Unavailable();
-        }
-    }
-
-    /**
      * @notice Burn and re-mint a number of tokens with specific hex values. Uses a commit-reveal scheme to prevent
      *         front-running. Only callable by the owner of the tokens. Users must call `commit(bytes32)` with the
      *         result of `computeBatchCommitment(address,uint256[],bytes32)` and wait at least COMMITMENT_LIFESPAN
@@ -102,23 +88,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
     }
 
     /**
-     * @notice Burn and re-mint a number of tokens with specific hex values. Does not use a commit-reveal scheme, so it
-     *         is vulnerable to front-running. Only callable by the owner of the tokens. Users calling this function
-     *         should use an RPC with a private mempool (such as Flashbots) to prevent front-running.
-     * @param oldIds The 6-hex-digit token IDs to burn
-     * @param newIds The 6-hex-digit token IDs to mint
-     * @return An array of booleans indicating whether each token was successfully rerolled
-     */
-    function batchRerollSpecificUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
-        public
-        payable
-        returns (bool[] memory)
-    {
-        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_PRICE);
-        return _batchRerollAndRefund(oldIds, newIds);
-    }
-
-    /**
      * @notice Burn and re-mint a token with a specific hex ID, then finalize it. Uses a commit-reveal scheme to
      *         prevent front-running. Only callable by the owner of the token. Users must call `commit(bytes32)`
      *         with the result of `computeCommitment(address,uint256,bytes32)` and wait at least COMMITMENT_LIFESPAN
@@ -131,22 +100,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         _validatePayment(REROLL_AND_FINALIZE_PRICE, 1);
 
         _rerollSpecificWithSalt(oldId, newId, salt);
-        // won't re-validate price, but above function already did
-        _finalizeToken(newId, msg.sender);
-    }
-
-    /**
-     * @notice Burn and re-mint a token with a specific hex ID, then finalize it. Does not use a commit-reveal scheme,
-     *         so it is vulnerable to front-running. Only callable by the owner of the token. Users calling this
-     *        function should use an RPC with a private mempool (such as Flashbots) to prevent front-running.
-     * @param oldId The 6-hex-digit token ID to burn
-     * @param newId The 6-hex-digit token ID to mint
-     */
-    function rerollSpecificAndFinalizeUnprotected(uint256 oldId, uint256 newId) public payable {
-        _validatePayment(REROLL_AND_FINALIZE_PRICE, 1);
-        if (!_rerollSpecificUnprotected(oldId, newId)) {
-            revert Unavailable();
-        }
         // won't re-validate price, but above function already did
         _finalizeToken(newId, msg.sender);
     }
@@ -166,25 +119,6 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
         _validateRerollBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
         bytes32 computedCommitment = computeBatchCommitment(msg.sender, newIds, salt);
         _assertCommittedReveal(computedCommitment);
-        return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
-    }
-
-    /**
-     * @notice Burn and re-mint a number of tokens with specific hex values, then finalize them. Does not use a
-     *         commit-reveal scheme, so it is vulnerable to front-running. Only callable by the owner of the tokens.
-     *         Users calling this function should use an RPC with a private mempool (such as Flashbots) to prevent
-     *         front-running.
-     * @param oldIds The 6-hex-digit token IDs to burn
-     * @param newIds The 6-hex-digit token IDs to mint
-     * @return An array of booleans indicating whether each token was successfully rerolled
-     */
-    function batchRerollSpecificAndFinalizeUnprotected(uint256[] calldata oldIds, uint256[] calldata newIds)
-        public
-        payable
-        returns (bool[] memory)
-    {
-        _validateRerollBatchAndPayment(oldIds, newIds, REROLL_AND_FINALIZE_PRICE);
-
         return _batchRerollAndFinalizeAndRefund(oldIds, newIds);
     }
 

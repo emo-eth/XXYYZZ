@@ -337,15 +337,6 @@ contract XXYYZZCoreTest is BaseTest {
         assertTrue(newIds[0] != (newIds[1] - 1));
     }
 
-    function _mintSpecific(uint256 id, bytes32 salt) internal {
-        bytes32 commitmentHash = test.computeCommitment(address(this), uint24(id), salt);
-        test.commit(commitmentHash);
-
-        vm.warp(this._timestamp() + 2 minutes);
-
-        test.mintSpecific{value: mintPrice}(id, salt);
-    }
-
     function testWithdraw() public {
         _mintSpecific(0, bytes32(0));
         test.finalize{value: finalizePrice}(0);
