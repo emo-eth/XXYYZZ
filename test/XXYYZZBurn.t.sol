@@ -24,7 +24,7 @@ contract XXYYZZBurnTest is Test, TestPlus {
     function setUp() public {
         vm.warp(10_000 days);
 
-        test = new XXYYZZ(address(this),5,false);
+        test = new XXYYZZ(address(this),5,false,address(0));
         mintPrice = test.MINT_PRICE();
         rerollPrice = test.REROLL_PRICE();
         rerollSpecificPrice = test.REROLL_PRICE();

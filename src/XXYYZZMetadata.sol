@@ -52,7 +52,7 @@ abstract contract XXYYZZMetadata is XXYYZZCore {
     ///@dev Return a contract-level JSON string
     function _stringContractURI() internal pure returns (string memory) {
         return
-        '{"name":"XXYYZZ","description":"Collectible, composable, and unique onchain colors.","external_link":"https://xxyyzz.art}';
+        '{"name":"XXYYZZ","description":"Collectible, composable, and unique onchain colors.","external_link":"https://xxyyzz.art"}';
     }
 
     ///@dev Return a name like "#aabbcc"

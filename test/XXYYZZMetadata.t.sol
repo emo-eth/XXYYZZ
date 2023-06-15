@@ -46,7 +46,7 @@ contract XXYYZZMetadataTest is Test, TestPlus {
     function testStringContractURI() public {
         assertEq(
             test.stringContractURI(),
-            '{"name":"XXYYZZ","description":"Collectible, composable, and unique onchain colors.","external_link":"https://xxyyzz.art}'
+            '{"name":"XXYYZZ","description":"Collectible, composable, and unique onchain colors.","external_link":"https://xxyyzz.art"}'
         );
     }
 

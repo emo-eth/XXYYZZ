@@ -15,9 +15,9 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
     address private constant SEADROP_FEE_RECIPIENT = 0x0000a26b00c1F0DF003000390027140000fAa719;
     address private constant SEADROP_ALLOWED_PAYER_1 = 0xf408Bee3443D0397e2c1cdE588Fb060AC657006F;
     address private constant SEADROP_ALLOWED_PAYER_2 = 0xE3d3D0eD702504e19825f44BC6542Ff2ec45cB9A;
-    bytes4 private constant INONFUNGIBLESEADROP_INTERFACE_ID = 0x1890fe8e;
+    uint256 private constant INONFUNGIBLESEADROP_INTERFACE_ID = 0x1890fe8e;
 
-    constructor(address seadrop) {
+    constructor(address seadrop, address initialOwner, uint256 maxBatchSize) XXYYZZMint(initialOwner, maxBatchSize) {
         SEADROP = seadrop;
         DEPLOYED_TIME = block.timestamp;
 
@@ -38,7 +38,7 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
                 mintPrice: uint80(0.005 ether),
                 startTime: uint48(DEPLOYED_TIME),
                 endTime: uint48(MAX_MINT_CLOSE_TIMESTAMP),
-                maxTotalMintableByWallet: uint16(type(uint16).max),
+                maxTotalMintableByWallet: type(uint16).max,
                 feeBps: uint16(1000),
                 restrictFeeRecipients: true
             })
@@ -82,6 +82,10 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
      * @notice Hard-coded for SeaDrop support
      */
     function getMintStats(address) external view returns (uint256, uint256, uint256) {
-        return (0, _numMinted, type(uint256).max);
+        return (0, _numMinted, type(uint24).max);
+    }
+
+    function maxSupply() external pure returns (uint256) {
+        return type(uint24).max;
     }
 }

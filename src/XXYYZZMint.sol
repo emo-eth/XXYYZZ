@@ -56,7 +56,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
     }
 
     function mintTo(address to, uint256 quantity) public payable returns (uint256[] memory) {
-        _checkMintTo(to, quantity);
+        return _checkMintTo(to, quantity);
     }
 
     /**
@@ -106,7 +106,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
     function _checkMintTo(address to, uint256 quantity) internal returns (uint256[] memory) {
         // check payment and quantity once
         uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
-        _mintTo(to, quantity, newAmount);
+        return _mintTo(to, quantity, newAmount);
     }
 
     /**

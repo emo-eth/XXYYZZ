@@ -180,7 +180,7 @@ abstract contract XXYYZZRerollFinalize is XXYYZZCore {
                 ++i;
             }
         }
-        // if none were rerolled, revert to avoid wasting gas
+        // if none were rerolled, revert to avoid wasting further gas
         if (quantityRerolled == 0) {
             revert NoneAvailable();
         }

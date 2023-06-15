@@ -115,10 +115,9 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     function name() public pure override returns (string memory) {
         // note that this is unsafe to call internally, as it abi-encodes the name and
         // performs a low-level return
-        assembly ("memory-safe") {
+        assembly {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
-            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -129,10 +128,9 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     function symbol() public pure override returns (string memory) {
         // note that this is unsafe to call internally, as it abi-encodes the symbol and
         // performs a low-level return
-        assembly ("memory-safe") {
+        assembly {
             mstore(0x20, 0x20)
             mstore(0x46, 0x06585859595a5a)
-            // mstore(0x46, 0x06616263313233)
             return(0x20, 0x80)
         }
     }
@@ -156,7 +154,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         override(ERC721, IERC165)
         returns (bool result)
     {
-        assembly ("memory-safe") {
+        assembly {
             let s := shr(224, interfaceId)
             // ERC165: 0x01ffc9a7, ERC721: 0x80ac58cd, ERC721Metadata: 0x5b5e139f. ERC4906: 0x49064906
             result := or(or(or(eq(s, 0x01ffc9a7), eq(s, 0x80ac58cd)), eq(s, 0x5b5e139f)), eq(s, 0x49064906))
@@ -180,10 +178,11 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         returns (bytes32 committmentHash)
     {
         assembly ("memory-safe") {
-            // shift sender to top 160 bits; id stays in bottom 24
-            mstore(0, or(shl(96, sender), and(id, MAX_UINT24)))
+            // shift sender left by 24 bits; id stays in bottom 24
+            mstore(0, or(shl(24, sender), and(id, MAX_UINT24)))
             mstore(0x20, salt)
-            committmentHash := keccak256(0, 0x40)
+            // start hashing at 0x09 to skip 9 empty bytes (32 - (20 + 3))
+            committmentHash := keccak256(0x09, 0x40)
         }
     }
 
@@ -197,24 +196,27 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
      * @param ids The 6-hex-digit token IDs to mint or reroll
      * @param salt The salt to use for the batch commitment
      */
-    function computeBatchCommitment(address sender, uint256[] memory ids, bytes32 salt)
+    function computeBatchCommitment(address sender, uint256[] calldata ids, bytes32 salt)
         public
         pure
         returns (bytes32 commitmentHash)
     {
         assembly ("memory-safe") {
+            // cache free mem pointer
+            let freeMemPtr := mload(0x40)
+            // multiply length of elements by 32 bytes for each element
+            let numBytes := shl(5, ids.length)
+            // copy contents of array to unallocated free memory
+            calldatacopy(freeMemPtr, ids.offset, numBytes)
             // hash contents of array, without length
             let arrayHash :=
                 keccak256(
-                    // add 0x20 to get start of array contents
-                    add(0x20, ids),
-                    // multiply length of elements by 32 bytes for each element
-                    // shl by 5 is equivalent to multiplying by 0x20
-                    shl(5, mload(ids))
+                    // start of array contents
+                    freeMemPtr,
+                    //length of array contents
+                    numBytes
                 )
 
-            // cache free mem pointer
-            let freeMemPtr := mload(0x40)
             // store sender in first memory slot
             mstore(0, sender)
             // store array hash in second memory slot
@@ -222,7 +224,8 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
             // clobber free memory pointer with salt
             mstore(0x40, salt)
             // compute commitment hash
-            commitmentHash := keccak256(0, 0x60)
+            // start hashing at 12 bytes since addresses are 20 bytes
+            commitmentHash := keccak256(0x0c, 0x60)
             // restore free memory pointer
             mstore(0x40, freeMemPtr)
         }
@@ -280,18 +283,18 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     /**
      * @dev Find the first unminted token ID based on the current number minted and PREVRANDAO
      * @param seed The seed to use for the random number generation – when minting, should be _numMinted, when
-     *             re-rolling, should be caller. In the case of re-rolling, this means that if a single caller makes
+     *             re-rolling, should be a function of the caller. In the case of re-rolling, this means that if a single caller makes
      *             multiple re-rolls in the same block, there will be collisions. This is fine, as the extra gas  cost
      *             discourages batch re-rolling with bots or scripts (at least from the same address).
      */
     function _findAvailableHex(uint256 seed) internal view returns (uint256) {
         uint256 tokenId;
-        assembly ("memory-safe") {
+        assembly {
             mstore(0, seed)
             mstore(0x20, prevrandao())
             // mstore(0x20, blockhash(sub(number(), 1)))
             // hash the two values together and then mask to a uint24
-            tokenId := and(keccak256(0, 0x40), MAX_UINT24)
+            tokenId := and(keccak256(0x0c, 0x40), MAX_UINT24)
         }
         // check for the small chance that the token ID is already minted or finalized – if so, increment until we
         // find one that isn't
@@ -353,7 +356,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
      * @param id The 6-hex-digit token ID to check
      */
     function _packedOwnershipSlot(uint256 id) internal view returns (uint256 result) {
-        assembly ("memory-safe") {
+        assembly {
             // since all ids are < uint24, this basically just clears the 0-slot before writing 4 bytes of slot seed
             mstore(0x00, id)
             mstore(0x1c, _ERC721_MASTER_SLOT_SEED)

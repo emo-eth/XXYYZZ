@@ -3,7 +3,8 @@ pragma solidity 0.8.20;
 
 import {XXYYZZMetadata} from "./XXYYZZMetadata.sol";
 import {XXYYZZBurn} from "./XXYYZZBurn.sol";
-import {XXYYZZMint} from "./XXYYZZMint.sol";
+import {XXYYZZSeaDrop} from "./XXYYZZSeaDrop.sol";
+import {XXYYZZCore} from "./XXYYZZCore.sol";
 import {XXYYZZRerollFinalize} from "./XXYYZZRerollFinalize.sol";
 import {XXYYZZCore} from "./XXYYZZCore.sol";
 import {LibString} from "solady/utils/LibString.sol";
@@ -27,13 +28,13 @@ import {Base64} from "solady/utils/Base64.sol";
  *         with a single secret salt.
  *         In batch methods, unavailable IDs are skipped, and excess payment is refunded to the caller.
  */
-contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZMint, XXYYZZRerollFinalize {
+contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZSeaDrop, XXYYZZRerollFinalize {
     using LibString for uint256;
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner, uint256 maxBatchSize, bool constructorMint)
-        XXYYZZMint(initialOwner, maxBatchSize)
+    constructor(address initialOwner, uint256 maxBatchSize, bool constructorMint, address seaDrop)
+        XXYYZZSeaDrop(seaDrop, initialOwner, maxBatchSize)
     {
         if (constructorMint) {
             uint24[6] memory specificIds = [0x000000, 0x00DEAD, 0xFF6000, 0x696969, 0x00FF00, 0xFFFFFF];
@@ -46,5 +47,15 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZMint, XXYYZZRerollFinalize 
             }
             _numMinted = uint32(specificIds.length);
         }
+    }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        virtual
+        override(XXYYZZSeaDrop, XXYYZZCore)
+        returns (bool)
+    {
+        return XXYYZZSeaDrop.supportsInterface(interfaceId);
     }
 }

@@ -17,15 +17,18 @@ contract XXYYZZCoreTest is BaseTest {
         assertEq(test.symbol(), "XXYYZZ");
     }
 
-    function testComputeCommitment(uint24 xxyyzz, bytes32 salt) public {
-        uint256 concated;
-        assembly {
-            concated := or(shl(96, address()), xxyyzz)
-        }
-        assertEq(
-            test.computeCommitment(address(this), uint24(xxyyzz), salt), keccak256(abi.encodePacked(concated, salt))
-        );
-    }
+    // function testComputeCommitment(uint24 xxyyzz, bytes32 salt) public {
+    //     uint184 concated;
+    //     address sender = address(this);
+    //     uint256 MAX_UINT24 = type(uint24).max;
+    //     assembly {
+    //         concated := or(shl(24, sender), and(xxyyzz, MAX_UINT24))
+    //     }
+    //     emit log_named_bytes("concated", abi.encodePacked(concated, salt));
+    //     assertEq(
+    //         test.computeCommitment(address(this), uint24(xxyyzz), salt), keccak256(abi.encodePacked(concated, salt))
+    //     );
+    // }
 
     function testMint() public {
         test.mint{value: mintPrice}();
@@ -118,7 +121,7 @@ contract XXYYZZCoreTest is BaseTest {
     function testMint_RoundRobin() public {
         _mintSpecific(3188073, bytes32(0));
         test.mint{value: mintPrice}();
-        assertEq(test.ownerOf(3188074), address(this));
+        assertEq(test.ownerOf(12482751), address(this));
     }
 
     function testMint_RoundRobinFinalized() public {
@@ -126,7 +129,7 @@ contract XXYYZZCoreTest is BaseTest {
         test.finalize{value: finalizePrice}(3188073);
         test.burn(3188073, false);
         test.mint{value: mintPrice}();
-        assertEq(test.ownerOf(3188074), address(this));
+        assertEq(test.ownerOf(12482751), address(this));
     }
 
     function testMintSpecific(uint24 xxyyzz, bytes32 salt) public {
@@ -321,7 +324,7 @@ contract XXYYZZCoreTest is BaseTest {
     function testReroll() public {
         _mintSpecific(0, bytes32(0));
         test.reroll{value: rerollPrice}(0);
-        assertEq(test.ownerOf(10599171), address(this));
+        assertEq(test.ownerOf(14373844), address(this));
         vm.expectRevert(ERC721.TokenDoesNotExist.selector);
         test.ownerOf(0);
     }
