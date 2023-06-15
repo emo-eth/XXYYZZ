@@ -54,10 +54,10 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
             revert OnlySeadrop();
         }
         // increment supply before minting
-        uint32 newAmount;
+        uint128 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are later validated to be uint24s
         unchecked {
-            newAmount = _numMinted + uint32(quantity);
+            newAmount = _numMinted + uint128(quantity);
         }
         _numMinted = newAmount;
         _mintTo(recipient, quantity, newAmount);
@@ -82,13 +82,13 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
      * @dev Hard-coded for SeaDrop support
      */
     function getMintStats(address) external view returns (uint256, uint256, uint256) {
-        return (0, _numMinted, type(uint24).max);
+        return (0, _numMinted, 16777216);
     }
 
     /**
      * @dev Hard-coded for SeaDrop support
      */
     function maxSupply() external pure returns (uint256) {
-        return type(uint24).max;
+        return 16777216;
     }
 }

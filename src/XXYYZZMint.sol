@@ -16,18 +16,6 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
     constructor(address initialOwner, uint256 maxBatchSize) XXYYZZCore(initialOwner, maxBatchSize) {
         MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 14 days;
-        mintCloseTimestamp = uint32(MAX_MINT_CLOSE_TIMESTAMP);
-    }
-
-    /**
-     * @notice Set the mint close timestamp. Close can only set to be earlier than MAX_MINT_CLOSE_TIMESTAMP. onlyOwner.
-     * @param timestamp The new timestamp
-     */
-    function setMintCloseTimestamp(uint256 timestamp) external onlyOwner {
-        if (timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
-            revert InvalidTimestamp();
-        }
-        mintCloseTimestamp = uint32(timestamp);
     }
 
     //////////
@@ -163,14 +151,16 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @return The new number of minted tokens
      */
     function _checkMintAndIncrementNumMinted(uint256 quantityRequested) internal returns (uint256) {
-        _validateTimestamp();
+        if (block.timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
+            revert MintClosed();
+        }
         _validatePayment(MINT_PRICE, quantityRequested);
 
         // increment supply before minting
-        uint32 newAmount;
+        uint128 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are later validated to be uint24s
         unchecked {
-            newAmount = _numMinted + uint32(quantityRequested);
+            newAmount = _numMinted + uint128(quantityRequested);
         }
         _numMinted = newAmount;
         return newAmount;
@@ -197,16 +187,12 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @param ids The 6-hex-digit token IDs to mint
      */
     function _validateBatchMintAndTimestamp(uint256[] calldata ids) internal view {
-        _validateTimestamp();
-        _validateBatchAndPayment(ids, MINT_PRICE);
-    }
-
-    /**
-     * @dev Validate the timestamp of a mint
-     */
-    function _validateTimestamp() internal view {
-        if (block.timestamp > mintCloseTimestamp) {
+        if (block.timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
             revert MintClosed();
         }
+        if (ids.length > MAX_BATCH_SIZE) {
+            revert MaxBatchSizeExceeded();
+        }
+        _validatePayment(ids.length, MINT_PRICE);
     }
 }

@@ -13,7 +13,7 @@ contract Deploy is Script {
         vm.createSelectFork(getChain("goerli").rpcUrl);
 
         vm.broadcast(deployer);
-        XXYYZZ test = new XXYYZZ(deployer, 5, true,0x00005EA00Ac477B1030CE78506496e8C2dE24bf5);
+        XXYYZZ test = new XXYYZZ(deployer, 5, new uint24[](0),0x00005EA00Ac477B1030CE78506496e8C2dE24bf5);
         uint256 mintPrice = test.MINT_PRICE();
 
         vm.broadcast(deployer);

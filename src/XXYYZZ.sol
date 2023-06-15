@@ -33,20 +33,17 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZSeaDrop, XXYYZZRerollFinali
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner, uint256 maxBatchSize, bool constructorMint, address seaDrop)
+    constructor(address initialOwner, uint256 maxBatchSize, uint24[] memory preMintIds, address seaDrop)
         XXYYZZSeaDrop(seaDrop, initialOwner, maxBatchSize)
     {
-        if (constructorMint) {
-            uint24[6] memory specificIds = [0x000000, 0x00DEAD, 0xFF6000, 0x696969, 0x00FF00, 0xFFFFFF];
-            for (uint256 i; i < specificIds.length;) {
-                _mint(initialOwner, specificIds[i]);
-                _finalizeToken(specificIds[i], initialOwner);
-                unchecked {
-                    ++i;
-                }
+        for (uint256 i; i < preMintIds.length;) {
+            _mint(initialOwner, preMintIds[i]);
+            _finalizeToken(preMintIds[i], initialOwner);
+            unchecked {
+                ++i;
             }
-            _numMinted = uint32(specificIds.length);
         }
+        _numMinted = uint32(preMintIds.length);
     }
 
     function supportsInterface(bytes4 interfaceId)

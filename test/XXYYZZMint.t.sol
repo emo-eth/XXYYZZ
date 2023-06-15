@@ -10,19 +10,19 @@ import {Solarray} from "solarray/Solarray.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
 contract XXYYZZMintTest is BaseTest {
-    function testSetMintCloseTimestamp() public {
-        vm.warp(20_000 days);
-        test.setMintCloseTimestamp(1);
-        assertEq(test.mintCloseTimestamp(), 1);
-        vm.expectRevert(XXYYZZCore.InvalidTimestamp.selector);
-        test.setMintCloseTimestamp(block.timestamp);
-    }
+    // function testSetMintCloseTimestamp() public {
+    //     vm.warp(20_000 days);
+    //     test.setMintCloseTimestamp(1);
+    //     assertEq(test.mintCloseTimestamp(), 1);
+    //     vm.expectRevert(XXYYZZCore.InvalidTimestamp.selector);
+    //     test.setMintCloseTimestamp(block.timestamp);
+    // }
 
-    function testSetMintCloseTimestamp_onlyOwner() public {
-        vm.prank(makeAddr("notOwner"));
-        vm.expectRevert(Ownable.Unauthorized.selector);
-        test.setMintCloseTimestamp(1);
-    }
+    // function testSetMintCloseTimestamp_onlyOwner() public {
+    //     vm.prank(makeAddr("notOwner"));
+    //     vm.expectRevert(Ownable.Unauthorized.selector);
+    //     test.setMintCloseTimestamp(1);
+    // }
 
     function testBatchMintSpecific_MaxBatchSizeExceeded() public {
         vm.expectRevert(XXYYZZCore.MaxBatchSizeExceeded.selector);

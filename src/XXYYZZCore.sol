@@ -44,9 +44,8 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     uint256 private constant _ERC721_MASTER_SLOT_SEED = 0x7d8825530a5a2e7a << 192;
 
     mapping(uint256 tokenId => address finalizer) public finalizers;
-    uint32 public mintCloseTimestamp;
-    uint32 _numBurned;
-    uint32 _numMinted;
+    uint128 _numBurned;
+    uint128 _numMinted;
 
     constructor(address initialOwner, uint256 maxBatchSize)
         // lifespan
@@ -241,7 +240,18 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
      * @param salt The salt to use for the commitment
      */
     function _mintSpecific(uint256 id, bytes32 salt) internal {
-        _mintSpecificWithCommitment(id, computeCommitment(msg.sender, id, salt));
+        bytes32 computedCommitment = computeCommitment(msg.sender, id, salt);
+
+        // validate ID is valid 6-hex-digit number
+        _validateId(id);
+        // validate commitment to prevent front-running
+        _assertCommittedReveal(computedCommitment);
+
+        // don't allow minting of tokens that were finalized and then burned
+        if (_isFinalized(id)) {
+            revert AlreadyFinalized();
+        }
+        _mint(msg.sender, id);
     }
 
     /**
@@ -256,7 +266,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         _assertCommittedReveal(computedCommitment);
 
         // don't allow minting of tokens that were finalized and then burned
-        if (_isFinalized(id)) {
+        if (_packedOwnershipSlot(id) != 0) {
             revert AlreadyFinalized();
         }
         _mint(msg.sender, id);
@@ -292,8 +302,8 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         assembly {
             mstore(0, seed)
             mstore(0x20, prevrandao())
-            // mstore(0x20, blockhash(sub(number(), 1)))
             // hash the two values together and then mask to a uint24
+            // seed is max an address, so start hashing at 0x0c
             tokenId := and(keccak256(0x0c, 0x40), MAX_UINT24)
         }
         // check for the small chance that the token ID is already minted or finalized – if so, increment until we
@@ -390,13 +400,9 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         if (a.length != b.length) {
             revert ArrayLengthMismatch();
         }
-        _validateBatchAndPayment(a, unitPrice);
-    }
-
-    function _validateBatchAndPayment(uint256[] calldata ids, uint256 unitPrice) internal view {
-        if (ids.length > MAX_BATCH_SIZE) {
+        if (a.length > MAX_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
-        _validatePayment(ids.length, unitPrice);
+        _validatePayment(a.length, unitPrice);
     }
 }
