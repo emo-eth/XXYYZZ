@@ -8,6 +8,7 @@ remappings = [
     'solady-test/=lib/solady/test/',
     'solarray/=lib/solarray/src/',
     'forge-std/=lib/forge-std/src/',
+    'create2-helpers/=lib/create2-helpers/',
 ]
 bytecode_hash = 'none'
 cbor_metadata = false
