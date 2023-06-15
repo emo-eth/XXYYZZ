@@ -15,7 +15,7 @@ abstract contract XXYYZZBurn is XXYYZZCore {
      *                      is burning tokens on behalf of a user.
      */
     function burn(uint256 xxyyzz, bool onlyFinalized) public {
-        // cannot overflow as there are at most 2^24 tokens, and _numBurned is a uint128
+        // cannot overflow as there are at most 2^24 tokens, and _numBurned is a uint32
         unchecked {
             _numBurned += 1;
         }
@@ -68,7 +68,7 @@ abstract contract XXYYZZBurn is XXYYZZCore {
                     revert OnlyFinalized();
                 }
             }
-            // no need to specify msg.sender since they are approved for all tokens
+            // no need to specify msg.sender since caller is approved for all tokens
             // this also checks token exists
             _burn(id);
             unchecked {

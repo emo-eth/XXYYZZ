@@ -79,12 +79,15 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
     }
 
     /**
-     * @notice Hard-coded for SeaDrop support
+     * @dev Hard-coded for SeaDrop support
      */
     function getMintStats(address) external view returns (uint256, uint256, uint256) {
         return (0, _numMinted, type(uint24).max);
     }
 
+    /**
+     * @dev Hard-coded for SeaDrop support
+     */
     function maxSupply() external pure returns (uint256) {
         return type(uint24).max;
     }
