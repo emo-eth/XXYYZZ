@@ -168,17 +168,17 @@ abstract contract XXYYZZMint is XXYYZZCore {
 
     /**
      * @dev Increment the number of minted tokens and refund any overpayment
-     * @param numMinted_ The number of tokens actually minted
+     * @param quantity The number of tokens actually minted
      */
-    function _incrementNumMintedAndRefundOverpayment(uint256 numMinted_) internal returns (uint256) {
+    function _incrementNumMintedAndRefundOverpayment(uint256 quantity) internal returns (uint256) {
         uint256 newAmount;
         // this can be unchecked because an ID can only be minted once, and all IDs are validated to be uint24s
         // overflow here implies invalid IDs down the line, which will cause a revert when minting
         unchecked {
-            newAmount = _numMinted + numMinted_;
+            newAmount = _numMinted + quantity;
         }
         _numMinted = uint32(newAmount);
-        _refundOverpayment(MINT_PRICE, numMinted_);
+        _refundOverpayment(MINT_PRICE, quantity);
         return newAmount;
     }
 
