@@ -8,6 +8,7 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
     error OnlySeadrop();
 
     address immutable SEADROP;
+    address immutable CREATOR_PAYOUT;
     uint256 immutable DEPLOYED_TIME;
 
     uint256 private constant SEADROP_TOKEN_CREATED_EVENT_TOPIC =
@@ -17,9 +18,12 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
     address private constant SEADROP_ALLOWED_PAYER_2 = 0xE3d3D0eD702504e19825f44BC6542Ff2ec45cB9A;
     uint256 private constant INONFUNGIBLESEADROP_INTERFACE_ID = 0x1890fe8e;
 
-    constructor(address seadrop, address initialOwner, uint256 maxBatchSize) XXYYZZMint(initialOwner, maxBatchSize) {
+    constructor(address seadrop, address creatorPayout, address initialOwner, uint256 maxBatchSize)
+        XXYYZZMint(initialOwner, maxBatchSize)
+    {
         SEADROP = seadrop;
         DEPLOYED_TIME = block.timestamp;
+        CREATOR_PAYOUT = creatorPayout;
 
         // log without adding event to abi
         assembly {
@@ -43,7 +47,7 @@ abstract contract XXYYZZSeaDrop is XXYYZZMint {
                 restrictFeeRecipients: true
             })
         );
-        seadrop.updateCreatorPayoutAddress(owner());
+        seadrop.updateCreatorPayoutAddress(CREATOR_PAYOUT);
         seadrop.updateAllowedFeeRecipient(SEADROP_FEE_RECIPIENT, true);
         seadrop.updatePayer(SEADROP_ALLOWED_PAYER_1, true);
         seadrop.updatePayer(SEADROP_ALLOWED_PAYER_2, true);

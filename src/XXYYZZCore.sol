@@ -33,7 +33,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     uint256 public constant REROLL_PRICE = 0.00025 ether;
     uint256 public constant FINALIZE_PRICE = 0.005 ether;
     uint256 public constant REROLL_AND_FINALIZE_PRICE = 0.00525 ether;
-    uint256 public immutable MAX_BATCH_SIZE;
+    uint256 public immutable MAX_SPECIFIC_BATCH_SIZE;
 
     uint256 constant BYTES3_UINT_SHIFT = 232;
     uint256 constant MAX_UINT24 = 0xFFFFFF;
@@ -58,7 +58,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         )
     {
         _initializeOwner(initialOwner);
-        MAX_BATCH_SIZE = maxBatchSize;
+        MAX_SPECIFIC_BATCH_SIZE = maxBatchSize;
     }
 
     receive() external payable {
@@ -400,7 +400,7 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
         if (a.length != b.length) {
             revert ArrayLengthMismatch();
         }
-        if (a.length > MAX_BATCH_SIZE) {
+        if (a.length > MAX_SPECIFIC_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
         _validatePayment(a.length, unitPrice);

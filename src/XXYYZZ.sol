@@ -33,9 +33,13 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZSeaDrop, XXYYZZRerollFinali
     using LibString for address;
     using Base64 for bytes;
 
-    constructor(address initialOwner, uint256 maxBatchSize, uint24[] memory preMintIds, address seaDrop)
-        XXYYZZSeaDrop(seaDrop, initialOwner, maxBatchSize)
-    {
+    constructor(
+        address initialOwner,
+        address creatorPayout,
+        uint256 maxBatchSize,
+        uint24[] memory preMintIds,
+        address seaDrop
+    ) XXYYZZSeaDrop(seaDrop, creatorPayout, initialOwner, maxBatchSize) {
         for (uint256 i; i < preMintIds.length;) {
             _mint(initialOwner, preMintIds[i]);
             _finalizeToken(preMintIds[i], initialOwner);

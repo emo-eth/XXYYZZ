@@ -190,7 +190,7 @@ abstract contract XXYYZZMint is XXYYZZCore {
         if (block.timestamp > MAX_MINT_CLOSE_TIMESTAMP) {
             revert MintClosed();
         }
-        if (ids.length > MAX_BATCH_SIZE) {
+        if (ids.length > MAX_SPECIFIC_BATCH_SIZE) {
             revert MaxBatchSizeExceeded();
         }
         _validatePayment(ids.length, MINT_PRICE);
