@@ -149,7 +149,13 @@ abstract contract XXYYZZCore is ERC721, IERC4906, CommitReveal, Ownable {
     }
 
     ///@inheritdoc IERC165
-    function supportsInterface(bytes4 interfaceId) public pure override(ERC721, IERC165) returns (bool result) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        pure
+        virtual
+        override(ERC721, IERC165)
+        returns (bool result)
+    {
         assembly ("memory-safe") {
             let s := shr(224, interfaceId)
             // ERC165: 0x01ffc9a7, ERC721: 0x80ac58cd, ERC721Metadata: 0x5b5e139f. ERC4906: 0x49064906

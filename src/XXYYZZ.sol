@@ -36,7 +36,7 @@ contract XXYYZZ is XXYYZZMetadata, XXYYZZBurn, XXYYZZMint, XXYYZZRerollFinalize 
         XXYYZZMint(initialOwner, maxBatchSize)
     {
         if (constructorMint) {
-            uint24[6] memory specificIds = [0x000000, 0x00DEAD, 0xFF6000, 0x000069, 0x00FF00, 0xFFFFFF];
+            uint24[6] memory specificIds = [0x000000, 0x00DEAD, 0xFF6000, 0x696969, 0x00FF00, 0xFFFFFF];
             for (uint256 i; i < specificIds.length;) {
                 _mint(initialOwner, specificIds[i]);
                 _finalizeToken(specificIds[i], initialOwner);

@@ -10,13 +10,12 @@ import {XXYYZZCore} from "./XXYYZZCore.sol";
  *         Tokens may be minted with a pseudorandom hex value, or with a specific hex value.
  *         The "Specific" methods allow for minting tokens with specific hex values with a commit-reveal scheme.
  *         Users may protect themselves against front-running by
- *         The "Unprotected" methods allow for minting tokens with specific hex values without a commit-reveal.
  */
 abstract contract XXYYZZMint is XXYYZZCore {
     uint256 public immutable MAX_MINT_CLOSE_TIMESTAMP;
 
     constructor(address initialOwner, uint256 maxBatchSize) XXYYZZCore(initialOwner, maxBatchSize) {
-        MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 30 days;
+        MAX_MINT_CLOSE_TIMESTAMP = block.timestamp + 14 days;
         mintCloseTimestamp = uint32(MAX_MINT_CLOSE_TIMESTAMP);
     }
 
@@ -53,20 +52,11 @@ abstract contract XXYYZZMint is XXYYZZCore {
      * @return The token IDs
      */
     function mint(uint256 quantity) public payable returns (uint256[] memory) {
-        // check payment and quantity once
-        uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
-        uint256[] memory tokenIds = new uint256[](quantity);
-        for (uint256 i; i < quantity;) {
-            // get pseudorandom hex id
-            uint256 tokenId = _findAvailableHex(newAmount);
-            _mint(msg.sender, tokenId);
-            tokenIds[i] = tokenId;
-            unchecked {
-                ++i;
-                ++newAmount;
-            }
-        }
-        return tokenIds;
+        return _checkMintTo(msg.sender, quantity);
+    }
+
+    function mintTo(address to, uint256 quantity) public payable returns (uint256[] memory) {
+        _checkMintTo(to, quantity);
     }
 
     /**
@@ -107,6 +97,37 @@ abstract contract XXYYZZMint is XXYYZZCore {
     /////////////
     // HELPERS //
     /////////////
+
+    /**
+     * @dev Mint tokens, validate that tokens were minted, and increment the number of minted tokens
+     * @param to Recipient of the tokens
+     * @param quantity Number of tokens to mint
+     */
+    function _checkMintTo(address to, uint256 quantity) internal returns (uint256[] memory) {
+        // check payment and quantity once
+        uint256 newAmount = _checkMintAndIncrementNumMinted(quantity);
+        _mintTo(to, quantity, newAmount);
+    }
+
+    /**
+     * @dev Mint tokens, validate that tokens were minted, and increment the number of minted tokens
+     * @param to Recipient of the tokens
+     * @param quantity Number of tokens to mint
+     */
+    function _mintTo(address to, uint256 quantity, uint256 newAmount) internal returns (uint256[] memory) {
+        uint256[] memory tokenIds = new uint256[](quantity);
+        for (uint256 i; i < quantity;) {
+            // get pseudorandom hex id
+            uint256 tokenId = _findAvailableHex(newAmount);
+            _mint(to, tokenId);
+            tokenIds[i] = tokenId;
+            unchecked {
+                ++i;
+                ++newAmount;
+            }
+        }
+        return tokenIds;
+    }
 
     /**
      * @dev Mint tokens, validate that tokens were minted, increment the number of minted tokens, and refund any
